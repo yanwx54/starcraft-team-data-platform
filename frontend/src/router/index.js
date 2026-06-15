@@ -36,6 +36,12 @@ const routes = [
         meta: { title: '选手详情' },
       },
       {
+        path: 'vs',
+        name: 'VsQuery',
+        component: () => import('../views/VsQueryView.vue'),
+        meta: { title: '对战查询' },
+      },
+      {
         path: 'players/:id/vs/:opponentId',
         name: 'PlayerVs',
         component: () => import('../views/PlayerVsView.vue'),
@@ -61,6 +67,49 @@ const routes = [
       },
     ],
   },
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: () => import('../views/admin/AdminLoginView.vue'),
+    meta: { title: '管理员登录', public: true },
+  },
+  {
+    path: '/admin',
+    component: () => import('../layouts/AdminLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'AdminDashboard',
+        component: () => import('../views/admin/AdminCrawlerView.vue'),
+        meta: { title: '后台管理' },
+      },
+      {
+        path: 'crawler',
+        name: 'AdminCrawler',
+        component: () => import('../views/admin/AdminCrawlerView.vue'),
+        meta: { title: '手动采集' },
+      },
+      {
+        path: 'backfill',
+        name: 'AdminBackfill',
+        component: () => import('../views/admin/AdminBackfillView.vue'),
+        meta: { title: '历史回补' },
+      },
+      {
+        path: 'issues',
+        name: 'AdminIssues',
+        component: () => import('../views/admin/AdminIssuesView.vue'),
+        meta: { title: '异常中心' },
+      },
+      {
+        path: 'translations',
+        name: 'AdminTranslations',
+        component: () => import('../views/admin/AdminTranslationsView.vue'),
+        meta: { title: '翻译规则管理' },
+      },
+    ],
+  },
 ]
 
 const router = createRouter({
@@ -70,6 +119,14 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   document.title = `${to.meta.title || '首页'} - 星际争霸团战数据平台`
+
+  // 后台路由守卫
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    const token = localStorage.getItem('admin_token')
+    if (!token) {
+      return { path: '/admin/login', query: { redirect: to.fullPath } }
+    }
+  }
 })
 
 export default router

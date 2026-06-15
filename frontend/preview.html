@@ -68,86 +68,104 @@ body::after {
   50% { opacity: 1; }
 }
 
-/* ===== LEFT SIDEBAR NAV ===== */
-.left-sidebar {
-  position: fixed;
-  bottom: 40px;
-  left: 24px;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+/* ===== TOP NAVIGATION BAR ===== */
+.top-nav {
+  position: sticky;
+  top: 2px;
+  z-index: 1000;
+  background: rgba(6,13,26,0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(0,212,255,0.15);
+  height: 52px;
 }
-.sidebar-icon {
-  width: 44px;
-  height: 44px;
+.top-nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+.top-nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+.top-nav-logo:hover { opacity: 0.85; }
+.logo-hex {
+  width: 28px;
+  height: 28px;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0,212,255,0.08);
-  border-radius: 6px;
-  background: rgba(6,13,26,0.8);
-  backdrop-filter: blur(8px);
-  cursor: pointer;
-  transition: all 0.3s;
-  color: #4a7a9e;
 }
-.sidebar-icon:hover {
-  color: #00d4ff;
-  border-color: rgba(0,212,255,0.3);
+.logo-hex svg { width: 28px; height: 28px; }
+.logo-text {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e0f0ff;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
-.sidebar-icon.active {
-  color: #00d4ff;
-  border-color: #00d4ff;
-  background: #003d52;
-  box-shadow: 0 0 12px rgba(0,212,255,0.3), inset 0 0 8px rgba(0,212,255,0.1);
-}
-.sidebar-icon svg { width: 20px; height: 20px; }
+.logo-text .accent { color: #00d4ff; }
 
-/* ===== RIGHT SIDEBAR ===== */
-.right-sidebar {
-  position: fixed;
-  bottom: 40px;
-  right: 24px;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-.right-sidebar .gradient-line {
-  width: 2px;
-  height: 60px;
-  background: linear-gradient(180deg, transparent, #00d4ff, transparent);
-  border-radius: 1px;
-}
-.right-sidebar .github-icon {
-  width: 44px;
-  height: 44px;
+.top-nav-items {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(0,212,255,0.08);
-  border-radius: 6px;
-  background: rgba(6,13,26,0.8);
-  backdrop-filter: blur(8px);
-  cursor: pointer;
-  transition: all 0.3s;
+  gap: 2px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 2px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: #4a7a9e;
+  cursor: pointer;
+  transition: all 0.25s;
+  border: 1px solid transparent;
+  position: relative;
+  user-select: none;
 }
-.right-sidebar .github-icon:hover {
+.nav-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.nav-item:hover {
   color: #00d4ff;
   border-color: rgba(0,212,255,0.3);
+  background: rgba(0,212,255,0.04);
 }
-.right-sidebar .github-icon svg { width: 20px; height: 20px; }
+.nav-item.active {
+  color: #00d4ff;
+  border-color: rgba(0,212,255,0.5);
+  background: rgba(0,61,82,0.5);
+  box-shadow: 0 0 12px rgba(0,212,255,0.15), inset 0 0 8px rgba(0,212,255,0.06);
+  text-shadow: 0 0 8px rgba(0,212,255,0.4);
+}
+.nav-item-label {
+  white-space: nowrap;
+}
 
 /* ===== CONTENT AREA ===== */
 .content {
   position: relative;
   z-index: 1;
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 32px;
 }
 
 /* ===== PAGE SYSTEM ===== */
@@ -172,7 +190,7 @@ body::after {
 
 /* ===== HERO ===== */
 .hero {
-  padding: 120px 0 80px;
+  padding: 100px 0 80px;
   min-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -254,6 +272,8 @@ body::after {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   white-space: nowrap;
+  line-height: 1.2;
+  margin: 0;
 }
 .section-heading .line {
   flex: 1;
@@ -384,6 +404,59 @@ body::after {
   white-space: nowrap;
 }
 .match-link:hover { color: #7eb8e0; text-shadow: 0 0 8px rgba(0,212,255,0.3); }
+
+/* ===== HOME GRID (one screen) ===== */
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding-top: 24px;
+  height: calc(100vh - 56px);
+  align-items: stretch;
+}
+.home-left, .home-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.home-card-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Home right tabs — same style as section-heading h2 */
+.home-right-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(0,212,255,0.1);
+  height: 33px;
+  align-items: center;
+}
+.home-tab {
+  padding: 4px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #4a7a9e;
+  cursor: pointer;
+  transition: all 0.25s;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+.home-tab:hover { color: #7eb8e0; }
+.home-tab.active {
+  color: #e0f0ff;
+  border-bottom-color: #00d4ff;
+}
+
+/* Tab panels */
+.home-tab-panel { display: none; flex: 1; flex-direction: column; min-height: 0; }
+.home-tab-panel.active { display: flex; }
 
 /* ===== RANKINGS SIDE BY SIDE ===== */
 .rankings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -870,6 +943,139 @@ body::after {
   border: 1px solid rgba(0,255,136,0.15);
 }
 
+/* ===== VS QUERY PAGE ===== */
+.vs-query-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+}
+.vs-query-player { flex: 1; }
+.vs-query-label {
+  display: block;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 8px;
+}
+.vs-query-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 8px;
+}
+.vs-query-vs {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: #2d5a7a;
+  letter-spacing: 0.1em;
+  padding: 8px 4px;
+}
+.vs-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 36px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.vs-result-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+  opacity: 0.5;
+}
+.vs-result-player {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  padding: 20px 16px;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+.vs-result-player.winner-side {
+  background: rgba(0,255,136,0.06);
+  border: 1px solid rgba(0,255,136,0.15);
+  box-shadow: 0 0 16px rgba(0,255,136,0.06);
+}
+.vs-result-player.loser-side {
+  background: rgba(255,68,102,0.04);
+  border: 1px solid rgba(255,68,102,0.1);
+}
+.vs-result-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #e0f0ff;
+  letter-spacing: 0.02em;
+}
+.vs-result-id {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  color: #7eb8e0;
+}
+.vs-result-score {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+}
+.vs-result-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  color: #4a7a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.vs-result-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 120px;
+}
+.vs-result-badge {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #2d5a7a;
+  letter-spacing: 0.1em;
+}
+.vs-result-total {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  color: #7eb8e0;
+}
+.vs-result-winrate {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+.vs-rate-bar {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: #030810;
+  overflow: hidden;
+}
+.vs-rate-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #003d52, #00d4ff);
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0,212,255,0.3);
+}
+
 /* ===== FOOTER ===== */
 .footer {
   padding: 60px 0 40px;
@@ -907,11 +1113,23 @@ body::after {
   .player-grid { grid-template-columns: repeat(2, 1fr); }
   .map-grid { grid-template-columns: 1fr; }
   .rankings-row { grid-template-columns: 1fr; }
-  .left-sidebar, .right-sidebar { display: none; }
-  .hero { padding: 80px 0 60px; min-height: 70vh; }
+  .home-grid { grid-template-columns: 1fr; height: auto; }
+  .home-left, .home-right { height: auto; }
+  .hero { padding: 60px 0 60px; min-height: 70vh; }
   .filter-bar { flex-wrap: wrap; }
   .tab-selector { flex-wrap: wrap; }
   .period-selector { flex-wrap: wrap; }
+  .top-nav-inner { padding: 0 16px; }
+  .content { padding: 0 16px; }
+  .nav-item-label { display: none; }
+  .nav-item { padding: 6px 10px; }
+  .ranking-table { font-size: 12px; }
+  .ranking-table th, .ranking-table td { padding: 8px 8px; }
+  .vs-query-row { flex-direction: column; gap: 12px; }
+  .vs-query-divider { padding-bottom: 0; }
+  .vs-result-header { flex-direction: column; gap: 20px; padding: 24px 16px; }
+  .vs-result-name { font-size: 22px; }
+  .vs-result-score { font-size: 36px; }
 }
 </style>
 </head>
@@ -920,46 +1138,63 @@ body::after {
 <!-- Top Accent Line -->
 <div class="top-accent-line"></div>
 
-<!-- Left Sidebar Navigation -->
-<nav class="left-sidebar">
-  <div class="sidebar-icon active" data-page="home" title="Home">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-      <polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-  </div>
-  <div class="sidebar-icon" data-page="matches" title="Matches">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-    </svg>
-  </div>
-  <div class="sidebar-icon" data-page="players" title="Players">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  </div>
-  <div class="sidebar-icon" data-page="maps" title="Maps">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
-    </svg>
-  </div>
-  <div class="sidebar-icon" data-page="rankings" title="Rankings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-    </svg>
+<!-- ===== TOP NAVIGATION BAR ===== -->
+<nav class="top-nav">
+  <div class="top-nav-inner">
+    <!-- Logo -->
+    <div class="top-nav-logo" onclick="switchPage('home')">
+      <div class="logo-hex">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 1L25.5 7.5V20.5L14 27L2.5 20.5V7.5L14 1Z" stroke="#00d4ff" stroke-width="1.2" fill="rgba(0,212,255,0.06)"/>
+          <path d="M14 6L21 10V18L14 22L7 18V10L14 6Z" stroke="#00d4ff" stroke-width="0.6" fill="rgba(0,212,255,0.03)" opacity="0.6"/>
+          <circle cx="14" cy="14" r="2.5" fill="#00d4ff" opacity="0.5"/>
+        </svg>
+      </div>
+      <span class="logo-text">SC <span class="accent">DATA</span></span>
+    </div>
+    <!-- Nav Items -->
+    <div class="top-nav-items">
+      <div class="nav-item active" data-page="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-item-label">首页</span>
+      </div>
+      <div class="nav-item" data-page="matches">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <span class="nav-item-label">比赛</span>
+      </div>
+      <div class="nav-item" data-page="players">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span class="nav-item-label">选手</span>
+      </div>
+      <div class="nav-item" data-page="vs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 8l2-2 2 2M8 16l-2 2-2-2"/><circle cx="12" cy="12" r="3"/><line x1="8" y1="8" x2="10" y2="10"/><line x1="14" y1="14" x2="16" y2="16"/>
+        </svg>
+        <span class="nav-item-label">对战</span>
+      </div>
+      <div class="nav-item" data-page="maps">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+        </svg>
+        <span class="nav-item-label">地图</span>
+      </div>
+      <div class="nav-item" data-page="rankings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-item-label">排行榜</span>
+      </div>
+    </div>
   </div>
 </nav>
-
-<!-- Right Sidebar -->
-<div class="right-sidebar">
-  <div class="gradient-line"></div>
-  <a href="https://github.com" class="github-icon" title="GitHub">
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-    </svg>
-  </a>
-</div>
 
 <!-- ===== MAIN CONTENT ===== -->
 <div class="content">
@@ -967,197 +1202,200 @@ body::after {
 <!-- ==================== PAGE 1: HOME ==================== -->
 <div class="page active" id="page-home">
 
-  <!-- HERO -->
-  <section class="hero">
-    <p class="hero-subtitle">Tactical Command Center</p>
-    <h1 class="hero-title">STARCRAFT<br><span class="accent">TEAM DATA</span></h1>
-    <p class="hero-desc">
-      专业的星际争霸团队战数据平台 — 实时追踪比赛记录、深度分析选手表现、精准洞察战术地图。以数据驱动每一场指挥决策。
-    </p>
-    <a onclick="switchPage('matches')" class="cta-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      ACCESS DATA CORE
-    </a>
-  </section>
-
-  <div class="section-divider"></div>
-
-  <!-- DATA OVERVIEW -->
-  <section>
-    <div class="section-heading">
-      <div class="label">01. Data Overview</div>
-      <div class="title-row">
-        <h2>数据概览</h2>
-        <div class="line"></div>
-      </div>
-    </div>
-    <div class="stats-grid">
-      <div class="hud-card stat-card">
-        <div class="stat-label">Total Matches</div>
-        <div class="stat-value">1,284</div>
-        <div class="stat-sub">+42 This Week</div>
-      </div>
-      <div class="hud-card stat-card">
-        <div class="stat-label">Active Players</div>
-        <div class="stat-value">386</div>
-        <div class="stat-sub">+12 This Month</div>
-      </div>
-      <div class="hud-card stat-card">
-        <div class="stat-label">Total Teams</div>
-        <div class="stat-value">24</div>
-        <div class="stat-sub">Season Updated</div>
-      </div>
-      <div class="hud-card stat-card">
-        <div class="stat-label">Recent Matches</div>
-        <div class="stat-value">42</div>
-        <div class="stat-sub">Last 7 Days</div>
-      </div>
-    </div>
-  </section>
-
-  <div class="section-divider"></div>
-
-  <!-- LATEST MATCHES -->
-  <section>
-    <div class="section-heading">
-      <div class="label">02. Latest Matches</div>
-      <div class="title-row">
-        <h2>最新比赛</h2>
-        <div class="line"></div>
-      </div>
-    </div>
-    <div class="matches-list">
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.14</span>
-        <span class="match-players">INnoVation <span class="vs">VS</span> Serral</span>
-        <span class="match-result win">2:1 WIN</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.13</span>
-        <span class="match-players">Rogue <span class="vs">VS</span> Maru</span>
-        <span class="match-result loss">0:2 LOSS</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.13</span>
-        <span class="match-players">Stats <span class="vs">VS</span> Dark</span>
-        <span class="match-result win">2:0 WIN</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.12</span>
-        <span class="match-players">Cure <span class="vs">VS</span> Reynor</span>
-        <span class="match-result win">2:1 WIN</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.12</span>
-        <span class="match-players">herO <span class="vs">VS</span> TY</span>
-        <span class="match-result loss">1:2 LOSS</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.11</span>
-        <span class="match-players">Dark <span class="vs">VS</span> Cure</span>
-        <span class="match-result win">2:1 WIN</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.10</span>
-        <span class="match-players">soO <span class="vs">VS</span> GuMiho</span>
-        <span class="match-result win">2:0 WIN</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-      <div class="match-item">
-        <div class="match-bullet"></div>
-        <span class="match-date">2026.06.10</span>
-        <span class="match-players">Maru <span class="vs">VS</span> herO</span>
-        <span class="match-result loss">1:2 LOSS</span>
-        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
-      </div>
-    </div>
-    <div style="margin-top: 24px; text-align: center;">
-      <span class="match-link" onclick="switchPage('matches')" style="font-size: 13px; letter-spacing: 0.1em;">查看全部 →</span>
-    </div>
-  </section>
-
-  <div class="section-divider"></div>
-
-  <!-- PRIZE RANKING & WIN STREAK -->
-  <section>
-    <div class="rankings-row">
-      <div class="hud-card ranking-card">
-        <div class="ranking-title">03. Prize Ranking</div>
-        <div class="ranking-item">
-          <span class="ranking-pos gold">01</span>
-          <span class="ranking-name">Serral</span>
-          <span class="ranking-val prize">$892,400</span>
-        </div>
-        <div class="ranking-item">
-          <span class="ranking-pos gold">02</span>
-          <span class="ranking-name">Maru</span>
-          <span class="ranking-val prize">$756,200</span>
-        </div>
-        <div class="ranking-item">
-          <span class="ranking-pos gold">03</span>
-          <span class="ranking-name">Rogue</span>
-          <span class="ranking-val prize">$634,800</span>
-        </div>
-        <div class="ranking-item">
-          <span class="ranking-pos">04</span>
-          <span class="ranking-name">INnoVation</span>
-          <span class="ranking-val prize">$521,600</span>
-        </div>
-        <div class="ranking-item">
-          <span class="ranking-pos">05</span>
-          <span class="ranking-name">Reynor</span>
-          <span class="ranking-val prize">$498,300</span>
+  <div class="home-grid">
+    <!-- LEFT: LATEST MATCHES -->
+    <div class="home-left">
+      <div class="section-heading" style="margin-bottom: 16px;">
+        <div class="title-row">
+          <h2>最新比赛</h2>
+          <div class="line"></div>
         </div>
       </div>
-      <div class="hud-card ranking-card">
-        <div class="ranking-title">04. Win Streak</div>
-        <div class="ranking-item">
-          <span class="ranking-pos gold">01</span>
-          <span class="ranking-name">Serral</span>
-          <span class="ranking-val streak">14 STREAK</span>
+      <div class="hud-card home-card-scroll" style="padding: 16px;">
+        <div class="matches-list">
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.14</span>
+            <span class="match-players">INnoVation <span class="vs">VS</span> Serral</span>
+            <span class="match-result win">2:1 WIN</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.13</span>
+            <span class="match-players">Rogue <span class="vs">VS</span> Maru</span>
+            <span class="match-result loss">0:2 LOSS</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.13</span>
+            <span class="match-players">Stats <span class="vs">VS</span> Dark</span>
+            <span class="match-result win">2:0 WIN</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.12</span>
+            <span class="match-players">Cure <span class="vs">VS</span> Reynor</span>
+            <span class="match-result win">2:1 WIN</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.12</span>
+            <span class="match-players">herO <span class="vs">VS</span> TY</span>
+            <span class="match-result loss">1:2 LOSS</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.11</span>
+            <span class="match-players">Dark <span class="vs">VS</span> Cure</span>
+            <span class="match-result win">2:1 WIN</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.10</span>
+            <span class="match-players">soO <span class="vs">VS</span> GuMiho</span>
+            <span class="match-result win">2:0 WIN</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
+          <div class="match-item">
+            <div class="match-bullet"></div>
+            <span class="match-date">2026.06.10</span>
+            <span class="match-players">Maru <span class="vs">VS</span> herO</span>
+            <span class="match-result loss">1:2 LOSS</span>
+            <span class="match-link" onclick="switchPage('matches')">详情 →</span>
+          </div>
         </div>
-        <div class="ranking-item">
-          <span class="ranking-pos gold">02</span>
-          <span class="ranking-name">Cure</span>
-          <span class="ranking-val streak">11 STREAK</span>
-        </div>
-        <div class="ranking-item">
-          <span class="ranking-pos gold">03</span>
-          <span class="ranking-name">Dark</span>
-          <span class="ranking-val streak">9 STREAK</span>
-        </div>
-        <div class="ranking-item">
-          <span class="ranking-pos">04</span>
-          <span class="ranking-name">herO</span>
-          <span class="ranking-val streak">8 STREAK</span>
-        </div>
-        <div class="ranking-item">
-          <span class="ranking-pos">05</span>
-          <span class="ranking-name">Stats</span>
-          <span class="ranking-val streak">7 STREAK</span>
+        <div style="margin-top: 10px; text-align: center;">
+          <span class="match-link" onclick="switchPage('matches')" style="font-size: 12px; letter-spacing: 0.1em;">查看全部 →</span>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <p class="footer-tagline">Designed with <span class="accent">#00d4ff</span> energy — Tactical Command Center</p>
-    <p class="footer-copy">© 2026 StarCraft Team Data Platform. All rights reserved.</p>
-  </footer>
+    <!-- RIGHT: SWITCHABLE RANKINGS -->
+    <div class="home-right">
+      <div class="home-right-tabs">
+        <button class="home-tab active" onclick="switchHomeTab(this, 'prize')">奖金排行</button>
+        <button class="home-tab" onclick="switchHomeTab(this, 'streak')">胜场排行</button>
+      </div>
+
+      <!-- Prize Ranking Panel -->
+      <div class="home-tab-panel active" id="home-tab-prize">
+        <div class="hud-card ranking-card home-card-scroll">
+          <div class="ranking-item">
+            <span class="ranking-pos gold">01</span>
+            <span class="ranking-name">Serral</span>
+            <span class="ranking-val prize">$892,400</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos gold">02</span>
+            <span class="ranking-name">Maru</span>
+            <span class="ranking-val prize">$756,200</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos gold">03</span>
+            <span class="ranking-name">Rogue</span>
+            <span class="ranking-val prize">$634,800</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">04</span>
+            <span class="ranking-name">INnoVation</span>
+            <span class="ranking-val prize">$521,600</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">05</span>
+            <span class="ranking-name">Reynor</span>
+            <span class="ranking-val prize">$498,300</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">06</span>
+            <span class="ranking-name">Dark</span>
+            <span class="ranking-val prize">$445,100</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">07</span>
+            <span class="ranking-name">Cure</span>
+            <span class="ranking-val prize">$398,700</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">08</span>
+            <span class="ranking-name">herO</span>
+            <span class="ranking-val prize">$367,200</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">09</span>
+            <span class="ranking-name">Stats</span>
+            <span class="ranking-val prize">$312,500</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">10</span>
+            <span class="ranking-name">TY</span>
+            <span class="ranking-val prize">$289,400</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Win Streak Panel -->
+      <div class="home-tab-panel" id="home-tab-streak">
+        <div class="hud-card ranking-card home-card-scroll">
+          <div class="ranking-item">
+            <span class="ranking-pos gold">01</span>
+            <span class="ranking-name">Serral</span>
+            <span class="ranking-val streak">14 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos gold">02</span>
+            <span class="ranking-name">Cure</span>
+            <span class="ranking-val streak">11 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos gold">03</span>
+            <span class="ranking-name">Dark</span>
+            <span class="ranking-val streak">9 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">04</span>
+            <span class="ranking-name">herO</span>
+            <span class="ranking-val streak">8 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">05</span>
+            <span class="ranking-name">Stats</span>
+            <span class="ranking-val streak">7 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">06</span>
+            <span class="ranking-name">Maru</span>
+            <span class="ranking-val streak">6 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">07</span>
+            <span class="ranking-name">INnoVation</span>
+            <span class="ranking-val streak">5 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">08</span>
+            <span class="ranking-name">Rogue</span>
+            <span class="ranking-val streak">5 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">09</span>
+            <span class="ranking-name">Reynor</span>
+            <span class="ranking-val streak">4 WINS</span>
+          </div>
+          <div class="ranking-item">
+            <span class="ranking-pos">10</span>
+            <span class="ranking-name">TY</span>
+            <span class="ranking-val streak">3 WINS</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 </div><!-- /page-home -->
 
@@ -1165,7 +1403,7 @@ body::after {
 <!-- ==================== PAGE 2: MATCHES ==================== -->
 <div class="page" id="page-matches">
 
-  <section style="padding-top: 100px;">
+  <section style="padding-top: 60px;">
     <div class="section-heading">
       <div class="label">01. Match List</div>
       <div class="title-row">
@@ -1306,7 +1544,7 @@ body::after {
 <!-- ==================== PAGE 3: PLAYERS ==================== -->
 <div class="page" id="page-players">
 
-  <section style="padding-top: 100px;">
+  <section style="padding-top: 60px;">
     <div class="section-heading">
       <div class="label">02. Player Roster</div>
       <div class="title-row">
@@ -1454,7 +1692,7 @@ body::after {
 <!-- ==================== PAGE 4: MAPS ==================== -->
 <div class="page" id="page-maps">
 
-  <section style="padding-top: 100px;">
+  <section style="padding-top: 60px;">
     <div class="section-heading">
       <div class="label">03. Tactical Maps</div>
       <div class="title-row">
@@ -1586,10 +1824,176 @@ body::after {
 </div><!-- /page-maps -->
 
 
-<!-- ==================== PAGE 5: RANKINGS ==================== -->
+<!-- ==================== PAGE 5: VS QUERY ==================== -->
+<div class="page" id="page-vs">
+
+  <section style="padding-top: 60px;">
+    <div class="section-heading">
+      <div class="label">05. Head-to-Head</div>
+      <div class="title-row">
+        <h2>对战查询</h2>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <!-- Query Panel -->
+    <div class="hud-card" style="padding: 28px; margin-bottom: 32px;">
+      <div class="vs-query-row">
+        <div class="vs-query-player">
+          <label class="vs-query-label">选手 A</label>
+          <select class="hud-select" style="width: 100%;" id="player-a-select">
+            <option value="">搜索选手...</option>
+            <option value="1">Serral (Z)</option>
+            <option value="2">Maru (T)</option>
+            <option value="3">INnoVation (T)</option>
+            <option value="4">Rogue (Z)</option>
+            <option value="5">Dark (Z)</option>
+            <option value="6">Stats (P)</option>
+            <option value="7">herO (P)</option>
+            <option value="8">Cure (T)</option>
+          </select>
+        </div>
+        <div class="vs-query-divider">
+          <div class="vs-query-vs">VS</div>
+        </div>
+        <div class="vs-query-player">
+          <label class="vs-query-label">选手 B</label>
+          <select class="hud-select" style="width: 100%;" id="player-b-select">
+            <option value="">搜索选手...</option>
+            <option value="1">Serral (Z)</option>
+            <option value="2">Maru (T)</option>
+            <option value="3">INnoVation (T)</option>
+            <option value="4">Rogue (Z)</option>
+            <option value="5">Dark (Z)</option>
+            <option value="6">Stats (P)</option>
+            <option value="7">herO (P)</option>
+            <option value="8">Cure (T)</option>
+          </select>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="cta-btn" onclick="showVsResult()" style="padding: 10px 32px; font-size: 13px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          查询对战记录
+        </button>
+      </div>
+    </div>
+
+    <!-- VS Result (hidden by default) -->
+    <div id="vs-result" style="display: none;">
+      <div class="hud-card vs-result-header">
+        <div class="vs-result-player winner-side">
+          <span class="race-tag zerg" style="margin-bottom: 8px;">Z</span>
+          <div class="vs-result-name">Serral</div>
+          <div class="vs-result-id">Serral</div>
+          <div class="vs-result-score" style="color: #00ff88; text-shadow: 0 0 12px rgba(0,255,136,0.3);">8</div>
+          <div class="vs-result-label">胜</div>
+        </div>
+        <div class="vs-result-center">
+          <div class="vs-result-badge">VS</div>
+          <div class="vs-result-total">12 局</div>
+          <div class="vs-result-winrate" style="color: #00ff88;">胜率 66.7%</div>
+          <div class="vs-rate-bar">
+            <div class="vs-rate-fill" style="width: 66.7%;"></div>
+          </div>
+        </div>
+        <div class="vs-result-player loser-side">
+          <span class="race-tag terran" style="margin-bottom: 8px;">T</span>
+          <div class="vs-result-name">Maru</div>
+          <div class="vs-result-id">Maru</div>
+          <div class="vs-result-score" style="color: #ff4466;">4</div>
+          <div class="vs-result-label">胜</div>
+        </div>
+      </div>
+
+      <!-- Match Detail Table -->
+      <div class="hud-card" style="margin-top: 20px; padding: 0; overflow: hidden;">
+        <table class="ranking-table" style="margin: 0;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>日期</th>
+              <th>比赛</th>
+              <th>地图</th>
+              <th>胜者</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="pos">01</td>
+              <td class="mono-cell">2026.06.14</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 8</td>
+              <td class="mono-cell">Neo Twilight</td>
+              <td style="color: #00ff88; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Serral</td>
+            </tr>
+            <tr>
+              <td class="pos">02</td>
+              <td class="mono-cell">2026.06.14</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 8</td>
+              <td class="mono-cell">Berlingrad</td>
+              <td style="color: #ff4466; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Maru</td>
+            </tr>
+            <tr>
+              <td class="pos">03</td>
+              <td class="mono-cell">2026.06.14</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 8</td>
+              <td class="mono-cell">Altitude</td>
+              <td style="color: #00ff88; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Serral</td>
+            </tr>
+            <tr>
+              <td class="pos">04</td>
+              <td class="mono-cell">2026.05.28</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 6</td>
+              <td class="mono-cell">Waterfall</td>
+              <td style="color: #00ff88; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Serral</td>
+            </tr>
+            <tr>
+              <td class="pos">05</td>
+              <td class="mono-cell">2026.05.28</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 6</td>
+              <td class="mono-cell">Old Duskwood</td>
+              <td style="color: #00ff88; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Serral</td>
+            </tr>
+            <tr>
+              <td class="pos">06</td>
+              <td class="mono-cell">2026.05.10</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 3</td>
+              <td class="mono-cell">Tropical Sacrifice</td>
+              <td style="color: #ff4466; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Maru</td>
+            </tr>
+            <tr>
+              <td class="pos">07</td>
+              <td class="mono-cell">2026.05.10</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 3</td>
+              <td class="mono-cell">Neo Twilight</td>
+              <td style="color: #00ff88; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Serral</td>
+            </tr>
+            <tr>
+              <td class="pos">08</td>
+              <td class="mono-cell">2026.04.22</td>
+              <td style="color: #00d4ff; cursor: pointer;">Season 2026 Q2 Week 1</td>
+              <td class="mono-cell">Berlingrad</td>
+              <td style="color: #00ff88; font-family: 'Rajdhani', sans-serif; font-weight: 700;">Serral</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-tagline">Designed with <span class="accent">#00d4ff</span> energy — Tactical Command Center</p>
+    <p class="footer-copy">© 2026 StarCraft Team Data Platform. All rights reserved.</p>
+  </footer>
+
+</div><!-- /page-vs -->
+
+
+<!-- ==================== PAGE 6: RANKINGS ==================== -->
 <div class="page" id="page-rankings">
 
-  <section style="padding-top: 100px;">
+  <section style="padding-top: 60px;">
     <div class="section-heading">
       <div class="label">04. Rankings</div>
       <div class="title-row">
@@ -1739,9 +2143,9 @@ function switchPage(pageId) {
   // Hide all pages, show target
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.getElementById('page-' + pageId).classList.add('active');
-  // Update sidebar active state
-  document.querySelectorAll('.sidebar-icon').forEach(function(s) { s.classList.remove('active'); });
-  var target = document.querySelector('[data-page="' + pageId + '"]');
+  // Update nav active state
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  var target = document.querySelector('.nav-item[data-page="' + pageId + '"]');
   if (target) target.classList.add('active');
   // Scroll to top
   window.scrollTo(0, 0);
@@ -1752,9 +2156,9 @@ function switchPage(pageId) {
   page.style.animation = '';
 }
 
-// Sidebar click handlers
-document.querySelectorAll('.sidebar-icon').forEach(function(icon) {
-  icon.addEventListener('click', function() {
+// Nav click handlers
+document.querySelectorAll('.nav-item').forEach(function(item) {
+  item.addEventListener('click', function() {
     var pageId = this.getAttribute('data-page');
     if (pageId) switchPage(pageId);
   });
@@ -1772,6 +2176,25 @@ function setTab(btn) {
   var parent = btn.parentElement;
   parent.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
+}
+
+// VS Query - show result
+function showVsResult() {
+  var a = document.getElementById('player-a-select').value;
+  var b = document.getElementById('player-b-select').value;
+  if (a && b && a !== b) {
+    document.getElementById('vs-result').style.display = 'block';
+  }
+}
+
+// Home tab switcher
+function switchHomeTab(btn, panelId) {
+  // Update tab buttons
+  btn.parentElement.querySelectorAll('.home-tab').forEach(function(t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+  // Update panels
+  document.querySelectorAll('.home-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('home-tab-' + panelId).classList.add('active');
 }
 </script>
 

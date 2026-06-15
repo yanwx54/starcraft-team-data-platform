@@ -6,6 +6,15 @@ const api = axios.create({
   timeout: 15000,
 })
 
+// 请求拦截器：自动附加 JWT Token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('admin_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 api.interceptors.response.use(
   (response) => {
     const { data } = response
@@ -16,7 +25,16 @@ api.interceptors.response.use(
     return data
   },
   (error) => {
-    const msg = error.response?.data?.message || error.message || '网络错误'
+    if (error.response?.status === 401) {
+      // Token 过期或无效，跳转登录
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_username')
+      if (window.location.pathname.startsWith('/admin')) {
+        window.location.href = '/admin/login'
+      }
+      return Promise.reject(error)
+    }
+    const msg = error.response?.data?.detail || error.response?.data?.message || error.message || '网络错误'
     ElMessage.error(msg)
     return Promise.reject(error)
   }

@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  # PostgreSQL 数据库
+  # ── PostgreSQL 数据库 ──
   starcraft-db:
     image: postgres:17
     container_name: starcraft-db
@@ -14,14 +14,19 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - starcraft-db-data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
+      - ./backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starcraft} -d ${POSTGRES_DB:-starcraft}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # FastAPI 后端
+  # ── FastAPI 后端 ──
   starcraft-api:
     build:
       context: ./backend
@@ -32,17 +37,28 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-starcraft}:${POSTGRES_PASSWORD:-starcraft123}@starcraft-db:5432/${POSTGRES_DB:-starcraft}
+      ENVIRONMENT: production
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
-      - ./backend:/app
       - ./translate_rules.md:/app/translate_rules.md:ro
+      - ./logs/api:/app/logs
     depends_on:
       starcraft-db:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-  # Vue3 前端
+  # ── Vue3 前端 (Nginx托管) ──
   starcraft-web:
     build:
       context: ./frontend
@@ -50,13 +66,63 @@ services:
     container_name: starcraft-web
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "${WEB_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/certbot-webroot:/var/www/certbot:ro
     depends_on:
-      - starcraft-api
-    command: npm run dev -- --host 0.0.0.0 --port 3000
+      starcraft-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── Certbot (Let's Encrypt自动续期) ──
+  certbot:
+    image: certbot/certbot
+    container_name: starcraft-certbot
+    volumes:
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./nginx/certbot-webroot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ── 数据库自动备份 ──
+  starcraft-backup:
+    image: postgres:17
+    container_name: starcraft-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-starcraft}
+      POSTGRES_USER: ${POSTGRES_USER:-starcraft}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-starcraft123}
+      PGHOST: starcraft-db
+      PGPORT: 5432
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup.sh"]
+    depends_on:
+      starcraft-db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
 
 volumes:
   starcraft-db-data:

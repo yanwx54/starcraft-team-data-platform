@@ -1,4 +1,5 @@
 from app.database import Base  # noqa: F401
+from app.models.admin_user import AdminUser  # noqa: F401
 from app.models.backfill_job import BackfillJob  # noqa: F401
 from app.models.crawl_log import CrawlLog  # noqa: F401
 from app.models.data_issue import DataIssue  # noqa: F401
@@ -18,6 +19,7 @@ from app.models.translation_rule import TranslationRule  # noqa: F401
 
 __all__ = [
     "Base",
+    "AdminUser",
     "BackfillJob",
     "CrawlLog",
     "DataIssue",

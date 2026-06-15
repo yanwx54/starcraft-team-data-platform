@@ -125,12 +125,47 @@ import { getPlayerDetail, getPlayerMatches, getPlayerPrizes, getPlayerMapStats, 
 
 ------
 
+### #008 Git 忘记提交导致大量变更堆积
+
+**场景**：完成多个 Sprint 后检查 git status，发现大量新增文件和修改未提交。
+
+**现象**：84 个文件未提交，包括整个 backend/ 和 frontend/ 目录。如果此时发生磁盘故障，所有代码将丢失。
+
+**原因**：开发过程中专注于编码，忘记及时 git commit。
+
+**解决**：
+1. 每完成一个功能模块后立即 commit
+2. 每次会话结束前检查 `git status` 并提交
+3. 定期 push 到 GitHub 远程备份
+
+**建议**：养成「完成即提交」的习惯，避免大量未提交变更堆积。可在每次对话结束前主动执行 `git status` 检查。
+
+------
+
+### #009 git upstream 消失警告
+
+**场景**：执行 `git status` 时提示 `Your branch is based on 'origin/master', but the upstream is gone`。
+
+**现象**：本地分支显示跟踪远程分支，但 Git 认为上游已消失。
+
+**原因**：可能是 push 后远程引用缓存未更新，或 push 过程中跟踪配置异常。
+
+**解决**：重新设置上游跟踪：
+```bash
+git branch --set-upstream-to=origin/master master
+```
+
+**建议**：push 后如出现此警告，执行上述命令修复。也可在 push 时使用 `-u` 参数：`git push -u origin master`。
+
+------
+
 ## 经验总结
 
 | 类别 | 要点 |
 |------|------|
 | Windows 环境 | PowerShell 5.x 不支持 `&&`、HEREDOC、`$()` 等 Bash 语法 |
-| Git 操作 | push 前确认远程仓库已存在；commit message 在 Windows 下保持单行 |
+| Git 操作 | push 前确认远程仓库已存在；commit message 在 Windows 下保持单行；及时提交避免堆积 |
 | 工具链 | gh CLI / Docker 需提前安装；未安装时使用替代方案 |
 | Edit 工具 | 替换前必须 Read 精确内容；缩进/空格必须完全一致 |
 | 代码规范 | 同模块 import 合并；逐步添加时注意代码整洁 |
+| 备份习惯 | 完成功能即提交；会话结束前检查 git status；定期 push 远程 |
