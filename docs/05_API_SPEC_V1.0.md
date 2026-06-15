@@ -322,13 +322,47 @@ page_size
 /api/v1/players/{id}/vs/{opponent_id}
 ```
 
+参数：
+
+```text
+season_id
+```
+
+可选，按赛季筛选。
+
+------
+
 返回：
 
 ```json
 {
+  "player": {
+    "id": 1,
+    "cn_name": "选手A",
+    "game_id": "PlayerA",
+    "race": "T"
+  },
+  "opponent": {
+    "id": 2,
+    "cn_name": "选手B",
+    "game_id": "PlayerB",
+    "race": "Z"
+  },
   "wins": 12,
   "losses": 8,
-  "matches": []
+  "total": 20,
+  "win_rate": 60.0,
+  "matches": [
+    {
+      "match_id": 100,
+      "game_no": 1,
+      "title": "2026 Season 1 Round 3",
+      "match_date": "2026-03-15",
+      "map_name": "Jane Doe",
+      "winner_player_id": 1,
+      "winner_name": "选手A"
+    }
+  ]
 }
 ```
 

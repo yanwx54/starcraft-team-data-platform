@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  # PostgreSQL 数据库
+  starcraft-db:
+    image: postgres:17
+    container_name: starcraft-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-starcraft}
+      POSTGRES_USER: ${POSTGRES_USER:-starcraft}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-starcraft123}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - starcraft-db-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-starcraft} -d ${POSTGRES_DB:-starcraft}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI 后端
+  starcraft-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: starcraft-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-starcraft}:${POSTGRES_PASSWORD:-starcraft123}@starcraft-db:5432/${POSTGRES_DB:-starcraft}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+      - ./translate_rules.md:/app/translate_rules.md:ro
+    depends_on:
+      starcraft-db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Vue3 前端
+  starcraft-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: starcraft-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - starcraft-api
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+
+volumes:
+  starcraft-db-data:

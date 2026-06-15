@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TACTICAL COMMAND CENTER — StarCraft Team Data</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Exo 2', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #030810;
+  color: #e0f0ff;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  position: relative;
+}
+a { color: inherit; text-decoration: none; cursor: pointer; }
+ul { list-style: none; }
+
+/* ===== BACKGROUND GRID ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ===== SCAN-LINE OVERLAY ===== */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,212,255,0.008) 2px,
+    rgba(0,212,255,0.008) 4px
+  );
+}
+
+/* ===== TOP ACCENT LINE ===== */
+.top-accent-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+  z-index: 9999;
+  animation: accentPulse 3s ease-in-out infinite;
+}
+@keyframes accentPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ===== LEFT SIDEBAR NAV ===== */
+.left-sidebar {
+  position: fixed;
+  bottom: 40px;
+  left: 24px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sidebar-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,212,255,0.08);
+  border-radius: 6px;
+  background: rgba(6,13,26,0.8);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #4a7a9e;
+}
+.sidebar-icon:hover {
+  color: #00d4ff;
+  border-color: rgba(0,212,255,0.3);
+}
+.sidebar-icon.active {
+  color: #00d4ff;
+  border-color: #00d4ff;
+  background: #003d52;
+  box-shadow: 0 0 12px rgba(0,212,255,0.3), inset 0 0 8px rgba(0,212,255,0.1);
+}
+.sidebar-icon svg { width: 20px; height: 20px; }
+
+/* ===== RIGHT SIDEBAR ===== */
+.right-sidebar {
+  position: fixed;
+  bottom: 40px;
+  right: 24px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.right-sidebar .gradient-line {
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(180deg, transparent, #00d4ff, transparent);
+  border-radius: 1px;
+}
+.right-sidebar .github-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,212,255,0.08);
+  border-radius: 6px;
+  background: rgba(6,13,26,0.8);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #4a7a9e;
+}
+.right-sidebar .github-icon:hover {
+  color: #00d4ff;
+  border-color: rgba(0,212,255,0.3);
+}
+.right-sidebar .github-icon svg { width: 20px; height: 20px; }
+
+/* ===== CONTENT AREA ===== */
+.content {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ===== PAGE SYSTEM ===== */
+.page {
+  display: none;
+  animation: pageFadeIn 0.4s ease-out;
+}
+.page.active {
+  display: block;
+}
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== SECTION DIVIDER ===== */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.15), transparent);
+  margin: 60px 0;
+}
+
+/* ===== HERO ===== */
+.hero {
+  padding: 120px 0 80px;
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.hero-subtitle {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 16px;
+}
+.hero-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(42px, 6vw, 72px);
+  font-weight: 700;
+  color: #e0f0ff;
+  line-height: 1.05;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.hero-title .accent { color: #00d4ff; }
+.hero-desc {
+  max-width: 520px;
+  font-size: 15px;
+  color: #7eb8e0;
+  line-height: 1.7;
+  margin-bottom: 36px;
+  margin-top: 20px;
+}
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border: 1px solid #00d4ff;
+  border-radius: 4px;
+  color: #00d4ff;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.cta-btn:hover {
+  background: rgba(0,212,255,0.08);
+  box-shadow: 0 0 20px rgba(0,212,255,0.2), inset 0 0 20px rgba(0,212,255,0.05);
+}
+.cta-btn svg { width: 16px; height: 16px; }
+
+/* ===== SECTION HEADING ===== */
+.section-heading {
+  margin-bottom: 40px;
+}
+.section-heading .label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.section-heading .title-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.section-heading h2 {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #e0f0ff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.section-heading .line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0,212,255,0.3), transparent);
+}
+
+/* ===== HUD CARD ===== */
+.hud-card {
+  background: #0d1a30;
+  border: 1px solid rgba(0,212,255,0.08);
+  border-radius: 6px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+.hud-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+  opacity: 0.5;
+}
+.hud-card:hover {
+  border-color: rgba(0,212,255,0.3);
+  box-shadow: 0 0 20px rgba(0,212,255,0.08), 0 4px 24px rgba(0,0,0,0.3);
+  background: #122240;
+}
+
+/* ===== STATS ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.stat-card .stat-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a7a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+.stat-card .stat-value {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: #e0f0ff;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.stat-card .stat-sub {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ===== LATEST MATCHES ===== */
+.matches-list { display: flex; flex-direction: column; }
+.match-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(0,212,255,0.06);
+  transition: all 0.2s;
+}
+.match-item:last-child { border-bottom: none; }
+.match-item:hover { padding-left: 8px; }
+.match-bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00d4ff;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(0,212,255,0.4);
+}
+.match-date {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0099cc;
+  min-width: 90px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.match-players {
+  flex: 1;
+  font-size: 14px;
+  color: #e0f0ff;
+  font-weight: 500;
+}
+.match-players .vs {
+  color: #4a7a9e;
+  margin: 0 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+.match-result {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.match-result.win { color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.15); }
+.match-result.loss { color: #ff4466; background: rgba(255,68,102,0.08); border: 1px solid rgba(255,68,102,0.15); }
+.match-link {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.match-link:hover { color: #7eb8e0; text-shadow: 0 0 8px rgba(0,212,255,0.3); }
+
+/* ===== RANKINGS SIDE BY SIDE ===== */
+.rankings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ranking-card .ranking-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 20px;
+}
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,212,255,0.05);
+}
+.ranking-item:last-child { border-bottom: none; }
+.ranking-pos {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 26px;
+  color: #4a7a9e;
+}
+.ranking-pos.gold {
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255,215,0,0.4);
+}
+.ranking-name { flex: 1; font-size: 14px; color: #e0f0ff; font-weight: 500; }
+.ranking-val {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7eb8e0;
+}
+.ranking-val.prize { color: #ffd700; }
+.ranking-val.streak { color: #00ff88; }
+
+/* ===== MATCH LIST CARDS ===== */
+.match-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.match-card .match-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.match-card-date {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a7a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.match-card-map {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  color: #0099cc;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.match-card-vs {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.match-card-player {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e0f0ff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.match-card-vs-text {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  color: #4a7a9e;
+  margin: 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.match-card-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0,212,255,0.06);
+}
+.match-card-score {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+}
+.match-card-score.winner { color: #00ff88; }
+.match-card-score.loser { color: #ff4466; }
+.match-card-score.separator { color: #4a7a9e; font-size: 14px; }
+.match-card-link {
+  display: block;
+  text-align: center;
+  margin-top: 14px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.match-card-link:hover { color: #7eb8e0; text-shadow: 0 0 8px rgba(0,212,255,0.3); }
+.wr-badge {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.wr-badge.win { color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.15); }
+.wr-badge.loss { color: #ff4466; background: rgba(255,68,102,0.08); border: 1px solid rgba(255,68,102,0.15); }
+
+/* ===== FILTER BAR ===== */
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 32px;
+  align-items: center;
+}
+.hud-input {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border: 1px solid rgba(0,212,255,0.12);
+  border-radius: 4px;
+  background: rgba(6,13,26,0.8);
+  color: #7eb8e0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  outline: none;
+  transition: all 0.3s;
+}
+.hud-input:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 8px rgba(0,212,255,0.15);
+}
+.hud-input::placeholder { color: #2d5a7a; }
+.hud-select {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border: 1px solid rgba(0,212,255,0.12);
+  border-radius: 4px;
+  background: rgba(6,13,26,0.8);
+  color: #7eb8e0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234a7a9e' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+.hud-select:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 8px rgba(0,212,255,0.15);
+}
+.hud-select option {
+  background: #0d1a30;
+  color: #e0f0ff;
+}
+
+/* ===== PLAYER LIST ===== */
+.player-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.player-card { text-align: center; }
+.player-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0f1f3a;
+  border: 1px solid rgba(0,212,255,0.1);
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #7eb8e0;
+}
+.player-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #e0f0ff;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.race-tag {
+  display: inline-block;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+}
+.race-tag.terran {
+  color: #00d4ff;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.25);
+}
+.race-tag.protoss {
+  color: #ffd700;
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.2);
+}
+.race-tag.zerg {
+  color: #00ff88;
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.2);
+}
+.player-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+.player-stat-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  color: #4a7a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.player-stat-val {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7eb8e0;
+}
+.winrate-bar {
+  width: 100%;
+  height: 3px;
+  background: #003d52;
+  border-radius: 2px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.winrate-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #003d52, #00ff88);
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(0,255,136,0.3);
+}
+
+/* ===== MAPS ===== */
+.map-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.map-card { text-align: center; }
+.map-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  opacity: 0.5;
+  transition: opacity 0.3s;
+}
+.map-card:hover .map-icon { opacity: 1; }
+.map-name {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e0f0ff;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.map-size {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  color: #4a7a9e;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.map-stats {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+.map-stat {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0099cc;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.map-usage {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  color: #4a7a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+/* ===== RANKINGS TABLE ===== */
+.period-selector {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+.period-btn {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border: 1px solid rgba(0,212,255,0.1);
+  border-radius: 3px;
+  background: transparent;
+  color: #4a7a9e;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.period-btn:hover {
+  border-color: rgba(0,212,255,0.3);
+  color: #00d4ff;
+}
+.period-btn.active {
+  background: rgba(0,212,255,0.08);
+  border-color: #00d4ff;
+  color: #00d4ff;
+  box-shadow: 0 0 8px rgba(0,212,255,0.15);
+}
+.tab-selector {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid rgba(0,212,255,0.08);
+  padding-bottom: 0;
+}
+.tab-btn {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #4a7a9e;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.tab-btn:hover {
+  color: #00d4ff;
+}
+.tab-btn.active {
+  color: #00d4ff;
+  border-bottom-color: #00d4ff;
+}
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ranking-table th {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a7a9e;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0,212,255,0.1);
+}
+.ranking-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0,212,255,0.04);
+  font-size: 13px;
+}
+.ranking-table tr:hover td {
+  background: rgba(0,212,255,0.02);
+}
+.ranking-table .pos {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a7a9e;
+}
+.ranking-table .pos.gold {
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255,215,0,0.4);
+}
+.ranking-table .pos.silver {
+  color: #c0c0c0;
+  text-shadow: 0 0 6px rgba(192,192,192,0.3);
+}
+.ranking-table .pos.bronze {
+  color: #cd7f32;
+  text-shadow: 0 0 6px rgba(205,127,50,0.3);
+}
+.player-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mini-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #0f1f3a;
+  border: 1px solid rgba(0,212,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7eb8e0;
+}
+.mono-cell {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7eb8e0;
+}
+.winrate-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.winrate-mini-bar {
+  width: 50px;
+  height: 3px;
+  background: #003d52;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.winrate-mini-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #003d52, #00ff88);
+  border-radius: 2px;
+  box-shadow: 0 0 4px rgba(0,255,136,0.2);
+}
+.race-tag-sm {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.race-tag-sm.terran {
+  color: #00d4ff;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.2);
+}
+.race-tag-sm.protoss {
+  color: #ffd700;
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.15);
+}
+.race-tag-sm.zerg {
+  color: #00ff88;
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.15);
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  padding: 60px 0 40px;
+  border-top: 1px solid rgba(0,212,255,0.06);
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.footer-tagline {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 12px;
+  color: #2d5a7a;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.footer-tagline .accent { color: #00d4ff; }
+.footer-copy {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  color: #2d5a7a;
+  margin-top: 8px;
+  letter-spacing: 0.06em;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .match-grid { grid-template-columns: repeat(2, 1fr); }
+  .player-grid { grid-template-columns: repeat(3, 1fr); }
+  .map-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .match-grid { grid-template-columns: 1fr; }
+  .player-grid { grid-template-columns: repeat(2, 1fr); }
+  .map-grid { grid-template-columns: 1fr; }
+  .rankings-row { grid-template-columns: 1fr; }
+  .left-sidebar, .right-sidebar { display: none; }
+  .hero { padding: 80px 0 60px; min-height: 70vh; }
+  .filter-bar { flex-wrap: wrap; }
+  .tab-selector { flex-wrap: wrap; }
+  .period-selector { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top Accent Line -->
+<div class="top-accent-line"></div>
+
+<!-- Left Sidebar Navigation -->
+<nav class="left-sidebar">
+  <div class="sidebar-icon active" data-page="home" title="Home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  </div>
+  <div class="sidebar-icon" data-page="matches" title="Matches">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+  </div>
+  <div class="sidebar-icon" data-page="players" title="Players">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  </div>
+  <div class="sidebar-icon" data-page="maps" title="Maps">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+    </svg>
+  </div>
+  <div class="sidebar-icon" data-page="rankings" title="Rankings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  </div>
+</nav>
+
+<!-- Right Sidebar -->
+<div class="right-sidebar">
+  <div class="gradient-line"></div>
+  <a href="https://github.com" class="github-icon" title="GitHub">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+    </svg>
+  </a>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="content">
+
+<!-- ==================== PAGE 1: HOME ==================== -->
+<div class="page active" id="page-home">
+
+  <!-- HERO -->
+  <section class="hero">
+    <p class="hero-subtitle">Tactical Command Center</p>
+    <h1 class="hero-title">STARCRAFT<br><span class="accent">TEAM DATA</span></h1>
+    <p class="hero-desc">
+      专业的星际争霸团队战数据平台 — 实时追踪比赛记录、深度分析选手表现、精准洞察战术地图。以数据驱动每一场指挥决策。
+    </p>
+    <a onclick="switchPage('matches')" class="cta-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      ACCESS DATA CORE
+    </a>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- DATA OVERVIEW -->
+  <section>
+    <div class="section-heading">
+      <div class="label">01. Data Overview</div>
+      <div class="title-row">
+        <h2>数据概览</h2>
+        <div class="line"></div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="hud-card stat-card">
+        <div class="stat-label">Total Matches</div>
+        <div class="stat-value">1,284</div>
+        <div class="stat-sub">+42 This Week</div>
+      </div>
+      <div class="hud-card stat-card">
+        <div class="stat-label">Active Players</div>
+        <div class="stat-value">386</div>
+        <div class="stat-sub">+12 This Month</div>
+      </div>
+      <div class="hud-card stat-card">
+        <div class="stat-label">Total Teams</div>
+        <div class="stat-value">24</div>
+        <div class="stat-sub">Season Updated</div>
+      </div>
+      <div class="hud-card stat-card">
+        <div class="stat-label">Recent Matches</div>
+        <div class="stat-value">42</div>
+        <div class="stat-sub">Last 7 Days</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- LATEST MATCHES -->
+  <section>
+    <div class="section-heading">
+      <div class="label">02. Latest Matches</div>
+      <div class="title-row">
+        <h2>最新比赛</h2>
+        <div class="line"></div>
+      </div>
+    </div>
+    <div class="matches-list">
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.14</span>
+        <span class="match-players">INnoVation <span class="vs">VS</span> Serral</span>
+        <span class="match-result win">2:1 WIN</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.13</span>
+        <span class="match-players">Rogue <span class="vs">VS</span> Maru</span>
+        <span class="match-result loss">0:2 LOSS</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.13</span>
+        <span class="match-players">Stats <span class="vs">VS</span> Dark</span>
+        <span class="match-result win">2:0 WIN</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.12</span>
+        <span class="match-players">Cure <span class="vs">VS</span> Reynor</span>
+        <span class="match-result win">2:1 WIN</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.12</span>
+        <span class="match-players">herO <span class="vs">VS</span> TY</span>
+        <span class="match-result loss">1:2 LOSS</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.11</span>
+        <span class="match-players">Dark <span class="vs">VS</span> Cure</span>
+        <span class="match-result win">2:1 WIN</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.10</span>
+        <span class="match-players">soO <span class="vs">VS</span> GuMiho</span>
+        <span class="match-result win">2:0 WIN</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="match-item">
+        <div class="match-bullet"></div>
+        <span class="match-date">2026.06.10</span>
+        <span class="match-players">Maru <span class="vs">VS</span> herO</span>
+        <span class="match-result loss">1:2 LOSS</span>
+        <span class="match-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+    </div>
+    <div style="margin-top: 24px; text-align: center;">
+      <span class="match-link" onclick="switchPage('matches')" style="font-size: 13px; letter-spacing: 0.1em;">查看全部 →</span>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- PRIZE RANKING & WIN STREAK -->
+  <section>
+    <div class="rankings-row">
+      <div class="hud-card ranking-card">
+        <div class="ranking-title">03. Prize Ranking</div>
+        <div class="ranking-item">
+          <span class="ranking-pos gold">01</span>
+          <span class="ranking-name">Serral</span>
+          <span class="ranking-val prize">$892,400</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos gold">02</span>
+          <span class="ranking-name">Maru</span>
+          <span class="ranking-val prize">$756,200</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos gold">03</span>
+          <span class="ranking-name">Rogue</span>
+          <span class="ranking-val prize">$634,800</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos">04</span>
+          <span class="ranking-name">INnoVation</span>
+          <span class="ranking-val prize">$521,600</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos">05</span>
+          <span class="ranking-name">Reynor</span>
+          <span class="ranking-val prize">$498,300</span>
+        </div>
+      </div>
+      <div class="hud-card ranking-card">
+        <div class="ranking-title">04. Win Streak</div>
+        <div class="ranking-item">
+          <span class="ranking-pos gold">01</span>
+          <span class="ranking-name">Serral</span>
+          <span class="ranking-val streak">14 STREAK</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos gold">02</span>
+          <span class="ranking-name">Cure</span>
+          <span class="ranking-val streak">11 STREAK</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos gold">03</span>
+          <span class="ranking-name">Dark</span>
+          <span class="ranking-val streak">9 STREAK</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos">04</span>
+          <span class="ranking-name">herO</span>
+          <span class="ranking-val streak">8 STREAK</span>
+        </div>
+        <div class="ranking-item">
+          <span class="ranking-pos">05</span>
+          <span class="ranking-name">Stats</span>
+          <span class="ranking-val streak">7 STREAK</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-tagline">Designed with <span class="accent">#00d4ff</span> energy — Tactical Command Center</p>
+    <p class="footer-copy">© 2026 StarCraft Team Data Platform. All rights reserved.</p>
+  </footer>
+
+</div><!-- /page-home -->
+
+
+<!-- ==================== PAGE 2: MATCHES ==================== -->
+<div class="page" id="page-matches">
+
+  <section style="padding-top: 100px;">
+    <div class="section-heading">
+      <div class="label">01. Match List</div>
+      <div class="title-row">
+        <h2>比赛列表</h2>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <input type="date" class="hud-input" value="2026-05-01">
+      <span style="color: #4a7a9e; font-family: 'Rajdhani', sans-serif; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;">TO</span>
+      <input type="date" class="hud-input" value="2026-06-14">
+      <select class="hud-select">
+        <option>Season 2026 Q2</option>
+        <option>Season 2026 Q1</option>
+        <option>Season 2025 Q4</option>
+        <option>All Seasons</option>
+      </select>
+    </div>
+
+    <!-- Match Cards Grid -->
+    <div class="match-grid">
+      <div class="hud-card match-card">
+        <div class="match-card-header">
+          <span class="match-card-date">2026.06.14</span>
+          <span class="wr-badge win">WIN</span>
+        </div>
+        <div class="match-card-vs">
+          <div class="match-card-player">INnoVation</div>
+          <div class="match-card-vs-text">VS</div>
+          <div class="match-card-player">Serral</div>
+        </div>
+        <div class="match-card-footer">
+          <span class="match-card-score winner">2</span>
+          <span class="match-card-score separator">:</span>
+          <span class="match-card-score loser">1</span>
+        </div>
+        <span class="match-card-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="hud-card match-card">
+        <div class="match-card-header">
+          <span class="match-card-date">2026.06.13</span>
+          <span class="wr-badge loss">LOSS</span>
+        </div>
+        <div class="match-card-vs">
+          <div class="match-card-player">Rogue</div>
+          <div class="match-card-vs-text">VS</div>
+          <div class="match-card-player">Maru</div>
+        </div>
+        <div class="match-card-footer">
+          <span class="match-card-score loser">0</span>
+          <span class="match-card-score separator">:</span>
+          <span class="match-card-score winner">2</span>
+        </div>
+        <span class="match-card-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="hud-card match-card">
+        <div class="match-card-header">
+          <span class="match-card-date">2026.06.13</span>
+          <span class="wr-badge win">WIN</span>
+        </div>
+        <div class="match-card-vs">
+          <div class="match-card-player">Stats</div>
+          <div class="match-card-vs-text">VS</div>
+          <div class="match-card-player">Dark</div>
+        </div>
+        <div class="match-card-footer">
+          <span class="match-card-score winner">2</span>
+          <span class="match-card-score separator">:</span>
+          <span class="match-card-score loser">0</span>
+        </div>
+        <span class="match-card-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="hud-card match-card">
+        <div class="match-card-header">
+          <span class="match-card-date">2026.06.12</span>
+          <span class="wr-badge win">WIN</span>
+        </div>
+        <div class="match-card-vs">
+          <div class="match-card-player">Cure</div>
+          <div class="match-card-vs-text">VS</div>
+          <div class="match-card-player">Reynor</div>
+        </div>
+        <div class="match-card-footer">
+          <span class="match-card-score winner">2</span>
+          <span class="match-card-score separator">:</span>
+          <span class="match-card-score loser">1</span>
+        </div>
+        <span class="match-card-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="hud-card match-card">
+        <div class="match-card-header">
+          <span class="match-card-date">2026.06.12</span>
+          <span class="wr-badge loss">LOSS</span>
+        </div>
+        <div class="match-card-vs">
+          <div class="match-card-player">herO</div>
+          <div class="match-card-vs-text">VS</div>
+          <div class="match-card-player">TY</div>
+        </div>
+        <div class="match-card-footer">
+          <span class="match-card-score loser">1</span>
+          <span class="match-card-score separator">:</span>
+          <span class="match-card-score winner">2</span>
+        </div>
+        <span class="match-card-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+      <div class="hud-card match-card">
+        <div class="match-card-header">
+          <span class="match-card-date">2026.06.11</span>
+          <span class="wr-badge win">WIN</span>
+        </div>
+        <div class="match-card-vs">
+          <div class="match-card-player">Dark</div>
+          <div class="match-card-vs-text">VS</div>
+          <div class="match-card-player">Cure</div>
+        </div>
+        <div class="match-card-footer">
+          <span class="match-card-score winner">2</span>
+          <span class="match-card-score separator">:</span>
+          <span class="match-card-score loser">1</span>
+        </div>
+        <span class="match-card-link" onclick="switchPage('matches')">查看详情 →</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-tagline">Designed with <span class="accent">#00d4ff</span> energy — Tactical Command Center</p>
+    <p class="footer-copy">© 2026 StarCraft Team Data Platform. All rights reserved.</p>
+  </footer>
+
+</div><!-- /page-matches -->
+
+
+<!-- ==================== PAGE 3: PLAYERS ==================== -->
+<div class="page" id="page-players">
+
+  <section style="padding-top: 100px;">
+    <div class="section-heading">
+      <div class="label">02. Player Roster</div>
+      <div class="title-row">
+        <h2>选手阵容</h2>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <!-- Search + Race Filter -->
+    <div class="filter-bar">
+      <input type="text" class="hud-input" placeholder="搜索选手..." style="flex: 1; max-width: 280px;">
+      <select class="hud-select">
+        <option>All Races</option>
+        <option>Terran</option>
+        <option>Protoss</option>
+        <option>Zerg</option>
+      </select>
+    </div>
+
+    <div class="player-grid">
+      <div class="hud-card player-card">
+        <div class="player-avatar">SR</div>
+        <div class="player-name">Serral</div>
+        <span class="race-tag zerg">Zerg</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">74.2%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">298</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:74.2%"></div></div>
+      </div>
+      <div class="hud-card player-card">
+        <div class="player-avatar">MR</div>
+        <div class="player-name">Maru</div>
+        <span class="race-tag terran">Terran</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">71.6%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">328</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:71.6%"></div></div>
+      </div>
+      <div class="hud-card player-card">
+        <div class="player-avatar">IN</div>
+        <div class="player-name">INnoVation</div>
+        <span class="race-tag terran">Terran</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">68.4%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">312</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:68.4%"></div></div>
+      </div>
+      <div class="hud-card player-card">
+        <div class="player-avatar">RG</div>
+        <div class="player-name">Rogue</div>
+        <span class="race-tag zerg">Zerg</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">66.8%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">285</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:66.8%"></div></div>
+      </div>
+      <div class="hud-card player-card">
+        <div class="player-avatar">DK</div>
+        <div class="player-name">Dark</div>
+        <span class="race-tag zerg">Zerg</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">64.1%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">291</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:64.1%"></div></div>
+      </div>
+      <div class="hud-card player-card">
+        <div class="player-avatar">ST</div>
+        <div class="player-name">Stats</div>
+        <span class="race-tag protoss">Protoss</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">63.5%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">276</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:63.5%"></div></div>
+      </div>
+      <div class="hud-card player-card">
+        <div class="player-avatar">HO</div>
+        <div class="player-name">herO</div>
+        <span class="race-tag protoss">Protoss</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">61.9%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">269</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:61.9%"></div></div>
+      </div>
+      <div class="hud-card player-card">
+        <div class="player-avatar">CE</div>
+        <div class="player-name">Cure</div>
+        <span class="race-tag terran">Terran</span>
+        <div class="player-stat-row">
+          <span class="player-stat-label">Win Rate</span>
+          <span class="player-stat-val">59.7%</span>
+        </div>
+        <div class="player-stat-row">
+          <span class="player-stat-label">APM</span>
+          <span class="player-stat-val">302</span>
+        </div>
+        <div class="winrate-bar"><div class="winrate-bar-fill" style="width:59.7%"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-tagline">Designed with <span class="accent">#00d4ff</span> energy — Tactical Command Center</p>
+    <p class="footer-copy">© 2026 StarCraft Team Data Platform. All rights reserved.</p>
+  </footer>
+
+</div><!-- /page-players -->
+
+
+<!-- ==================== PAGE 4: MAPS ==================== -->
+<div class="page" id="page-maps">
+
+  <section style="padding-top: 100px;">
+    <div class="section-heading">
+      <div class="label">03. Tactical Maps</div>
+      <div class="title-row">
+        <h2>战术地图</h2>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <div class="map-grid">
+      <div class="hud-card map-card">
+        <div class="map-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="48" height="48" rx="4" stroke="#00d4ff" stroke-width="1.2" opacity="0.6"/>
+            <circle cx="22" cy="22" r="4" fill="#00d4ff" opacity="0.4"/>
+            <circle cx="42" cy="42" r="4" fill="#00d4ff" opacity="0.4"/>
+            <line x1="22" y1="22" x2="42" y2="42" stroke="#00d4ff" stroke-width="0.8" opacity="0.3"/>
+            <rect x="28" y="28" width="8" height="8" rx="1" fill="#00d4ff" opacity="0.2"/>
+          </svg>
+        </div>
+        <div class="map-name">Neo Twilight</div>
+        <div class="map-size">152×168</div>
+        <div class="map-usage">使用次数: 186</div>
+        <div class="map-stats">
+          <span class="map-stat">T: 52%</span>
+          <span class="map-stat">Z: 48%</span>
+        </div>
+        <div class="winrate-bar" style="margin-top: 12px;"><div class="winrate-bar-fill" style="width:52%"></div></div>
+      </div>
+      <div class="hud-card map-card">
+        <div class="map-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="48" height="48" rx="4" stroke="#00d4ff" stroke-width="1.2" opacity="0.6"/>
+            <circle cx="20" cy="32" r="6" fill="#00d4ff" opacity="0.3"/>
+            <circle cx="44" cy="32" r="6" fill="#00d4ff" opacity="0.3"/>
+            <line x1="26" y1="32" x2="38" y2="32" stroke="#00d4ff" stroke-width="1.2" opacity="0.4"/>
+            <rect x="30" y="16" width="4" height="32" rx="1" fill="#00d4ff" opacity="0.15"/>
+          </svg>
+        </div>
+        <div class="map-name">Berlingrad</div>
+        <div class="map-size">144×160</div>
+        <div class="map-usage">使用次数: 162</div>
+        <div class="map-stats">
+          <span class="map-stat">T: 47%</span>
+          <span class="map-stat">P: 53%</span>
+        </div>
+        <div class="winrate-bar" style="margin-top: 12px;"><div class="winrate-bar-fill" style="width:53%"></div></div>
+      </div>
+      <div class="hud-card map-card">
+        <div class="map-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="48" height="48" rx="4" stroke="#00d4ff" stroke-width="1.2" opacity="0.6"/>
+            <path d="M32 14 L44 28 L38 28 L38 50 L26 50 L26 28 L20 28 Z" fill="#00d4ff" opacity="0.2" stroke="#00d4ff" stroke-width="0.8"/>
+            <circle cx="16" cy="44" r="3" fill="#00d4ff" opacity="0.4"/>
+            <circle cx="48" cy="44" r="3" fill="#00d4ff" opacity="0.4"/>
+          </svg>
+        </div>
+        <div class="map-name">Altitude</div>
+        <div class="map-size">160×144</div>
+        <div class="map-usage">使用次数: 148</div>
+        <div class="map-stats">
+          <span class="map-stat">P: 55%</span>
+          <span class="map-stat">Z: 45%</span>
+        </div>
+        <div class="winrate-bar" style="margin-top: 12px;"><div class="winrate-bar-fill" style="width:55%"></div></div>
+      </div>
+      <div class="hud-card map-card">
+        <div class="map-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="48" height="48" rx="4" stroke="#00d4ff" stroke-width="1.2" opacity="0.6"/>
+            <path d="M20 20 Q32 12 44 20 Q52 32 44 44 Q32 52 20 44 Q12 32 20 20Z" fill="#00d4ff" opacity="0.1" stroke="#00d4ff" stroke-width="0.8"/>
+            <circle cx="32" cy="32" r="6" fill="#00d4ff" opacity="0.3"/>
+            <circle cx="32" cy="32" r="2" fill="#00d4ff" opacity="0.6"/>
+          </svg>
+        </div>
+        <div class="map-name">Waterfall</div>
+        <div class="map-size">148×156</div>
+        <div class="map-usage">使用次数: 134</div>
+        <div class="map-stats">
+          <span class="map-stat">Z: 51%</span>
+          <span class="map-stat">T: 49%</span>
+        </div>
+        <div class="winrate-bar" style="margin-top: 12px;"><div class="winrate-bar-fill" style="width:51%"></div></div>
+      </div>
+      <div class="hud-card map-card">
+        <div class="map-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="48" height="48" rx="4" stroke="#00d4ff" stroke-width="1.2" opacity="0.6"/>
+            <path d="M16 32 L24 20 L40 20 L48 32 L40 44 L24 44 Z" fill="#00d4ff" opacity="0.1" stroke="#00d4ff" stroke-width="0.8"/>
+            <line x1="24" y1="20" x2="40" y2="44" stroke="#00d4ff" stroke-width="0.6" opacity="0.3"/>
+            <line x1="40" y1="20" x2="24" y2="44" stroke="#00d4ff" stroke-width="0.6" opacity="0.3"/>
+          </svg>
+        </div>
+        <div class="map-name">Tropical Sacrifice</div>
+        <div class="map-size">136×152</div>
+        <div class="map-usage">使用次数: 121</div>
+        <div class="map-stats">
+          <span class="map-stat">T: 50%</span>
+          <span class="map-stat">P: 50%</span>
+        </div>
+        <div class="winrate-bar" style="margin-top: 12px;"><div class="winrate-bar-fill" style="width:50%"></div></div>
+      </div>
+      <div class="hud-card map-card">
+        <div class="map-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="8" width="48" height="48" rx="4" stroke="#00d4ff" stroke-width="1.2" opacity="0.6"/>
+            <rect x="16" y="16" width="14" height="14" rx="2" fill="#00d4ff" opacity="0.15" stroke="#00d4ff" stroke-width="0.8"/>
+            <rect x="34" y="34" width="14" height="14" rx="2" fill="#00d4ff" opacity="0.15" stroke="#00d4ff" stroke-width="0.8"/>
+            <line x1="30" y1="23" x2="34" y2="41" stroke="#00d4ff" stroke-width="0.8" opacity="0.4"/>
+          </svg>
+        </div>
+        <div class="map-name">Old Duskwood</div>
+        <div class="map-size">164×140</div>
+        <div class="map-usage">使用次数: 108</div>
+        <div class="map-stats">
+          <span class="map-stat">P: 48%</span>
+          <span class="map-stat">Z: 52%</span>
+        </div>
+        <div class="winrate-bar" style="margin-top: 12px;"><div class="winrate-bar-fill" style="width:52%"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-tagline">Designed with <span class="accent">#00d4ff</span> energy — Tactical Command Center</p>
+    <p class="footer-copy">© 2026 StarCraft Team Data Platform. All rights reserved.</p>
+  </footer>
+
+</div><!-- /page-maps -->
+
+
+<!-- ==================== PAGE 5: RANKINGS ==================== -->
+<div class="page" id="page-rankings">
+
+  <section style="padding-top: 100px;">
+    <div class="section-heading">
+      <div class="label">04. Rankings</div>
+      <div class="title-row">
+        <h2>排行榜</h2>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <!-- Period Selector -->
+    <div class="period-selector">
+      <button class="period-btn" onclick="setPeriod(this)">总排行</button>
+      <button class="period-btn active" onclick="setPeriod(this)">本赛季</button>
+      <button class="period-btn" onclick="setPeriod(this)">近30天</button>
+      <button class="period-btn" onclick="setPeriod(this)">近7天</button>
+      <button class="period-btn" onclick="setPeriod(this)">自定义</button>
+    </div>
+
+    <!-- Tab Selector -->
+    <div class="tab-selector">
+      <button class="tab-btn active" onclick="setTab(this)">胜场排行</button>
+      <button class="tab-btn" onclick="setTab(this)">胜率排行</button>
+      <button class="tab-btn" onclick="setTab(this)">奖金排行</button>
+      <button class="tab-btn" onclick="setTab(this)">连胜排行</button>
+    </div>
+
+    <!-- Ranking Table -->
+    <table class="ranking-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>选手</th>
+          <th>种族</th>
+          <th>场次</th>
+          <th>胜</th>
+          <th>负</th>
+          <th>胜率</th>
+          <th>奖金</th>
+          <th>连胜</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="pos gold">01</td>
+          <td><div class="player-cell"><div class="mini-avatar">SR</div>Serral</div></td>
+          <td><span class="race-tag-sm zerg">Z</span></td>
+          <td class="mono-cell">186</td>
+          <td class="mono-cell">138</td>
+          <td class="mono-cell">48</td>
+          <td><div class="winrate-cell"><span class="mono-cell">74.2%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:74.2%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$892K</td>
+          <td class="mono-cell" style="color:#00ff88;">14</td>
+        </tr>
+        <tr>
+          <td class="pos silver">02</td>
+          <td><div class="player-cell"><div class="mini-avatar">MR</div>Maru</div></td>
+          <td><span class="race-tag-sm terran">T</span></td>
+          <td class="mono-cell">174</td>
+          <td class="mono-cell">125</td>
+          <td class="mono-cell">49</td>
+          <td><div class="winrate-cell"><span class="mono-cell">71.6%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:71.6%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$756K</td>
+          <td class="mono-cell" style="color:#00ff88;">6</td>
+        </tr>
+        <tr>
+          <td class="pos bronze">03</td>
+          <td><div class="player-cell"><div class="mini-avatar">IN</div>INnoVation</div></td>
+          <td><span class="race-tag-sm terran">T</span></td>
+          <td class="mono-cell">162</td>
+          <td class="mono-cell">111</td>
+          <td class="mono-cell">51</td>
+          <td><div class="winrate-cell"><span class="mono-cell">68.4%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:68.4%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$522K</td>
+          <td class="mono-cell" style="color:#00ff88;">5</td>
+        </tr>
+        <tr>
+          <td class="pos">04</td>
+          <td><div class="player-cell"><div class="mini-avatar">RG</div>Rogue</div></td>
+          <td><span class="race-tag-sm zerg">Z</span></td>
+          <td class="mono-cell">158</td>
+          <td class="mono-cell">106</td>
+          <td class="mono-cell">52</td>
+          <td><div class="winrate-cell"><span class="mono-cell">66.8%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:66.8%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$635K</td>
+          <td class="mono-cell" style="color:#00ff88;">4</td>
+        </tr>
+        <tr>
+          <td class="pos">05</td>
+          <td><div class="player-cell"><div class="mini-avatar">DK</div>Dark</div></td>
+          <td><span class="race-tag-sm zerg">Z</span></td>
+          <td class="mono-cell">170</td>
+          <td class="mono-cell">109</td>
+          <td class="mono-cell">61</td>
+          <td><div class="winrate-cell"><span class="mono-cell">64.1%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:64.1%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$412K</td>
+          <td class="mono-cell" style="color:#00ff88;">9</td>
+        </tr>
+        <tr>
+          <td class="pos">06</td>
+          <td><div class="player-cell"><div class="mini-avatar">ST</div>Stats</div></td>
+          <td><span class="race-tag-sm protoss">P</span></td>
+          <td class="mono-cell">148</td>
+          <td class="mono-cell">94</td>
+          <td class="mono-cell">54</td>
+          <td><div class="winrate-cell"><span class="mono-cell">63.5%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:63.5%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$387K</td>
+          <td class="mono-cell" style="color:#00ff88;">7</td>
+        </tr>
+        <tr>
+          <td class="pos">07</td>
+          <td><div class="player-cell"><div class="mini-avatar">HO</div>herO</div></td>
+          <td><span class="race-tag-sm protoss">P</span></td>
+          <td class="mono-cell">152</td>
+          <td class="mono-cell">94</td>
+          <td class="mono-cell">58</td>
+          <td><div class="winrate-cell"><span class="mono-cell">61.9%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:61.9%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$298K</td>
+          <td class="mono-cell" style="color:#00ff88;">8</td>
+        </tr>
+        <tr>
+          <td class="pos">08</td>
+          <td><div class="player-cell"><div class="mini-avatar">CE</div>Cure</div></td>
+          <td><span class="race-tag-sm terran">T</span></td>
+          <td class="mono-cell">140</td>
+          <td class="mono-cell">84</td>
+          <td class="mono-cell">56</td>
+          <td><div class="winrate-cell"><span class="mono-cell">59.7%</span><div class="winrate-mini-bar"><div class="winrate-mini-fill" style="width:59.7%"></div></div></div></td>
+          <td class="mono-cell" style="color:#ffd700;">$264K</td>
+          <td class="mono-cell" style="color:#00ff88;">11</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p class="footer-tagline">Designed with <span class="accent">#00d4ff</span> energy — Tactical Command Center</p>
+    <p class="footer-copy">© 2026 StarCraft Team Data Platform. All rights reserved.</p>
+  </footer>
+
+</div><!-- /page-rankings -->
+
+</div><!-- /.content -->
+
+<!-- ===== Scripts ===== -->
+<script>
+function switchPage(pageId) {
+  // Hide all pages, show target
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('page-' + pageId).classList.add('active');
+  // Update sidebar active state
+  document.querySelectorAll('.sidebar-icon').forEach(function(s) { s.classList.remove('active'); });
+  var target = document.querySelector('[data-page="' + pageId + '"]');
+  if (target) target.classList.add('active');
+  // Scroll to top
+  window.scrollTo(0, 0);
+  // Re-trigger fade-in animation
+  var page = document.getElementById('page-' + pageId);
+  page.style.animation = 'none';
+  page.offsetHeight; // trigger reflow
+  page.style.animation = '';
+}
+
+// Sidebar click handlers
+document.querySelectorAll('.sidebar-icon').forEach(function(icon) {
+  icon.addEventListener('click', function() {
+    var pageId = this.getAttribute('data-page');
+    if (pageId) switchPage(pageId);
+  });
+});
+
+// Period selector
+function setPeriod(btn) {
+  var parent = btn.parentElement;
+  parent.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+// Tab selector
+function setTab(btn) {
+  var parent = btn.parentElement;
+  parent.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
