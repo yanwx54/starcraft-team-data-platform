@@ -28,11 +28,19 @@
 
 # 2. 工作日志
 
-## 2026-06-16：Vercel 部署适配
+## 2026-06-16：Vercel → Cloudflare Pages + Zeabur 混合部署
 
-- [x] 创建 vercel.json 配置（Serverless Python + 静态前端 + Cron 定时采集）
-- [x] 创建 api/index.py Vercel Serverless 入口（FastAPI 适配）
-- [x] 创建 api/requirements.txt Vercel Python 依赖
+- [x] 创建 wrangler.toml Cloudflare Pages 配置
+- [x] 创建 functions/api/v1/[[path]].js API 代理（Cloudflare Functions）
+- [x] 创建 zeabur.yaml 后端部署配置
+- [x] 更新前端 API 层支持 VITE_API_BASE_URL 环境变量
+- [x] 更新 .env.example 增加 Vercel/Cloudflare 部署说明
+
+## 2026-06-16：Vercel 部署适配（已替换为 Cloudflare 方案）
+
+- [x] 创建 vercel.json 配置（保留作为备选方案）
+- [x] 创建 api/index.py Vercel Serverless 入口（保留作为备选方案）
+- [x] 创建 api/requirements.txt Vercel Python 依赖（保留作为备选方案）
 - [x] 后端新增 Vercel Cron 端点 `GET /api/v1/admin/crawler/cron`（CRON_SECRET 鉴权）
 - [x] 创建 .github/workflows/crawler.yml（GitHub Actions 备用定时采集）
 - [x] 创建 backend/app/crawler/scheduler_cli.py（爬虫命令行入口）
@@ -227,51 +235,73 @@
 
 ------
 
-# 8. Vercel 部署指南
+# 8. 部署指南
 
-## 前置条件
+## 推荐方案：Cloudflare Pages + Zeabur（国内友好）
 
-1. [Neon](https://neon.tech) 免费账号 → 创建 PostgreSQL 数据库
-2. [Vercel](https://vercel.com) 免费账号
+### 架构
 
-## 部署步骤
+| 组件 | 平台 | 说明 |
+|------|------|------|
+| 前端 | Cloudflare Pages | 全球 CDN，国内访问快 |
+| 后端 | Zeabur（香港节点） | 支持 Docker/Python，国内访问好 |
+| 数据库 | Neon | 免费 PostgreSQL |
+| 爬虫 | GitHub Actions | 每日定时采集 |
 
 ### Step 1：创建 Neon 数据库
 
-1. 注册 https://neon.tech → Create Project → 选择区域（推荐 Singapore）
+1. 注册 https://neon.tech → Create Project → 选择区域（Singapore）
 2. 获取连接串：`postgresql://user:pass@ep-xxx.neon.tech/starcraft?sslmode=require`
 3. 执行数据库迁移：
    ```bash
    DATABASE_URL="postgresql://..." alembic upgrade head
    ```
 
-### Step 2：Vercel 部署
+### Step 2：部署后端到 Zeabur
 
-1. 登录 https://vercel.com → Import Git Repository → 选择 `yanwx54/starcraft-team-data-platform`
-2. Framework Preset: Other
-3. Root Directory: `/`（默认）
-4. 环境变量配置：
+1. 注册 https://zeabur.com（GitHub 登录）
+2. Create Project → 区域选择 **Hong Kong**
+3. Add Service → Git → 选择 `yanwx54/starcraft-team-data-platform`
+4. 设置 Root Directory: `backend`
+5. 环境变量：
    - `DATABASE_URL` = Neon 连接串
+   - `ENVIRONMENT` = production
    - `CRON_SECRET` = 自定义随机字符串
-5. 点击 Deploy
+6. Zeabur 自动检测 Dockerfile 并构建部署
 
-### Step 3：GitHub Actions 配置
+### Step 3：部署前端到 Cloudflare Pages
+
+1. 登录 https://dash.cloudflare.com → Pages → Create project
+2. Connect to Git → 选择 `yanwx54/starcraft-team-data-platform`
+3. 构建设置：
+   - Framework preset: None
+   - Build command: `cd frontend && npm install && npm run build`
+   - Build output directory: `frontend/dist`
+4. 环境变量：
+   - `VITE_API_BASE_URL` = 留空（使用 Cloudflare Functions 代理）
+5. Cloudflare Functions 会自动代理 `/api/v1/*` 到 Zeabur 后端
+
+### Step 4：GitHub Actions 配置
 
 1. GitHub 仓库 → Settings → Secrets → New secret
 2. Name: `DATABASE_URL`，Value: Neon 连接串
-3. Actions 将在每日北京时间 09:00 自动执行爬虫
+3. Actions 每日北京时间 09:00 自动执行爬虫
 
-## 架构对比
+### 费用
 
-| 组件 | 原方案（Docker） | 新方案（Vercel） |
-|------|------------------|------------------|
-| 前端 | Nginx 容器 | Vercel 静态托管 |
-| 后端 | FastAPI 容器 | Vercel Serverless |
-| 数据库 | PostgreSQL 容器 | Neon 免费版 |
-| 爬虫 | APScheduler | Vercel Cron + GitHub Actions |
-| SSL | Let's Encrypt | Vercel 自动 |
-| 备份 | pg_dump 脚本 | Neon 自动 |
-| 费用 | 需服务器 | **免费** |
+| 平台 | 费用 |
+|------|------|
+| Cloudflare Pages | 免费 |
+| Zeabur | 免费额度 $5/月 |
+| Neon | 免费版 0.5GB |
+| GitHub Actions | 免费额度 2000 分钟/月 |
+| **总计** | **免费** |
+
+------
+
+## 备选方案：Vercel（海外用户）
+
+详见 vercel.json 和 api/ 目录。Vercel 方案将前端和 API 统一部署，但国内访问不稳定。
 
 ------
 

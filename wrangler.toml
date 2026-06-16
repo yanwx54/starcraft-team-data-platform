@@ -1,0 +1,26 @@
+# Cloudflare Pages 部署配置
+# 文档: https://developers.cloudflare.com/pages/platform/build-configuration
+
+# 前端构建配置（在 Cloudflare Dashboard 中设置）
+# ============================================================
+# Framework preset: None
+# Build command: cd frontend && npm install && npm run build
+# Build output directory: frontend/dist
+# Root directory: /
+#
+# 环境变量:
+#   VITE_API_BASE_URL = https://your-api.zeabur.app/api/v1
+# ============================================================
+
+# Cloudflare Functions（可选，用于 API 代理）
+# 如果后端部署在 Zeabur，可通过 Functions 做代理避免跨域
+name = "starcraft-team-data-platform"
+compatibility_date = "2024-01-01"
+
+# Pages 项目配置
+[site]
+bucket = "./frontend/dist"
+
+# Functions 目录（API 代理）
+[functions]
+directory = "functions"

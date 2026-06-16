@@ -197,7 +197,7 @@ git push -u origin master
 
 ### #012 Neon 数据库连接串需要 sslmode=require
 
-**场景**：从 Vercel Serverless 连接 Neon PostgreSQL。
+**场景**：从 Vercel Serverless / Zeabur 连接 Neon PostgreSQL。
 
 **现象**：连接失败，报 SSL 相关错误。
 
@@ -208,7 +208,38 @@ git push -u origin master
 DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/starcraft?sslmode=require
 ```
 
-**建议**：在 Vercel 环境变量和 GitHub Secrets 中都使用带 `sslmode=require` 的连接串。
+**建议**：在所有平台的环境变量中都使用带 `sslmode=require` 的连接串。
+
+------
+
+### #013 Vercel 国内访问不稳定
+
+**场景**：Vercel 部署后国内用户访问缓慢或无法访问。
+
+**现象**：页面加载超时，API 请求失败。
+
+**原因**：Vercel CDN 节点主要在海外，国内访问受网络环境影响大。
+
+**解决**：改用 Cloudflare Pages + Zeabur（香港节点）混合部署方案：
+- 前端：Cloudflare Pages（全球 CDN，国内访问较好）
+- 后端：Zeabur（香港节点，国内访问稳定）
+- 通过 Cloudflare Functions 代理 API 请求到 Zeabur
+
+**建议**：面向国内用户的项目，优先选择 Cloudflare + 亚太节点平台的组合。
+
+------
+
+### #014 Cloudflare Workers 不支持 Python
+
+**场景**：尝试将 FastAPI 后端部署到 Cloudflare Workers。
+
+**现象**：Python Workers 仅支持 Pyodide（WebAssembly），SQLAlchemy/psycopg2 等原生 C 扩展无法运行。
+
+**原因**：Cloudflare Workers 基于 V8 引擎，Python 支持通过 Pyodide 实现，仅支持纯 Python 包。
+
+**解决**：后端部署到支持 Docker 的平台（Zeabur/Railway），前端使用 Cloudflare Pages。通过 Cloudflare Functions 做反向代理。
+
+**建议**：Python 后端项目在 Cloudflare 生态中只能用于前端静态托管，API 需要外部部署。
 
 ------
 
@@ -224,3 +255,5 @@ DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/starcraft?sslmode=require
 | 备份习惯 | 完成功能即提交；会话结束前检查 git status；定期 push 远程 |
 | Serverless | 不支持持久进程；函数有超时限制；定时任务需外部触发 |
 | Neon | 连接串必须包含 `?sslmode=require` |
+| 国内部署 | Vercel 国内访问不稳定；Cloudflare Pages + Zeabur（HK）是更优组合 |
+| Cloudflare | Workers 不支持 Python 原生扩展；Python 后端需外部部署 |

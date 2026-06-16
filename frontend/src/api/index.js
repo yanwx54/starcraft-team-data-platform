@@ -1,8 +1,14 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
+// 支持混合部署：Cloudflare Pages 代理 / 直接连接后端
+// 开发环境: /api/v1 → Vite proxy → localhost:8000
+// Cloudflare Pages: /api/v1 → Functions 代理 → Zeabur
+// 独立部署: VITE_API_BASE_URL=https://xxx.zeabur.app/api/v1
+const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL,
   timeout: 15000,
 })
 
