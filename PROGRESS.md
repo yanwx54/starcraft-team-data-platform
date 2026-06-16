@@ -33,6 +33,14 @@
 - [x] 确定最终架构：Cloudflare Pages（前端 + 代理）+ Vercel（后端 API）+ Neon（数据库）
 - [x] 更新 Cloudflare Functions 代理指向 Vercel
 - [x] 更新 Zeabur 配置为备选方案
+- [x] 修复 wrangler.toml 配置冲突（移除 `[site]` 和 `[functions]` 字段）
+- [x] Cloudflare Pages 项目成功构建并部署（域名：starcraft-team-data-platform.pages.dev）
+- [x] Cloudflare Pages 环境变量配置（API_BASE_URL）
+- [x] Vercel 项目创建并部署（域名：starcraft-team-data-platform.vercel.app）
+- [x] Vercel 环境变量配置（DATABASE_URL、CRON_SECRET）
+- [x] Neon 数据库创建并获取连接串
+- [x] 修复 vercel.json 配置（从旧版 builds/routes 改为新版 functions/rewrites）
+- [ ] **待解决**：Vercel Python Serverless Function 仍返回 404，需进一步排查
 
 ## 2026-06-16：Cloudflare Pages + Zeabur 混合部署（已替换）
 
@@ -311,6 +319,7 @@
 
 | Commit | 说明 | 日期 |
 |--------|------|------|
+| `077a80d` | fix: update vercel.json to use new functions/rewrites config for Vercel Python Runtime | 06-16 |
 | `e29be9e` | fix: remove conflicting site/functions config from wrangler.toml for Cloudflare Pages | 06-16 |
 | `617a821` | docs: initial project documentation and configuration | 06-14 |
 | `bd78e6e` | feat: add backend, frontend, docker config, and enhanced VS feature | 06-14 |
