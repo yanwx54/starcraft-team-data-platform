@@ -2,7 +2,7 @@
 
 韩国星际争霸团战数据自动采集与统计平台（STDP）
 
-更新日期：2026-06-15
+更新日期：2026-06-16
 
 ------
 
@@ -22,11 +22,24 @@
 | Sprint 9 | 部署 | 已完成 | 100% |
 | Sprint 10 | 测试验收 | 未开始 | 0% |
 
-**整体完成度：约 92%**
+**整体完成度：约 95%**
 
 ------
 
-# 2. 今日工作（2026-06-14 ~ 06-15）
+# 2. 工作日志
+
+## 2026-06-16：Vercel 部署适配
+
+- [x] 创建 vercel.json 配置（Serverless Python + 静态前端 + Cron 定时采集）
+- [x] 创建 api/index.py Vercel Serverless 入口（FastAPI 适配）
+- [x] 创建 api/requirements.txt Vercel Python 依赖
+- [x] 后端新增 Vercel Cron 端点 `GET /api/v1/admin/crawler/cron`（CRON_SECRET 鉴权）
+- [x] 创建 .github/workflows/crawler.yml（GitHub Actions 备用定时采集）
+- [x] 创建 backend/app/crawler/scheduler_cli.py（爬虫命令行入口）
+- [x] 更新 .env.example 增加 CRON_SECRET 和 Neon 数据库说明
+- [x] 更新 vite.config.js 代理地址适配本地开发
+
+## 2026-06-14 ~ 06-15：项目初始化与核心开发
 
 ## 2.1 项目初始化与基础设施
 
@@ -143,6 +156,9 @@
 - [x] .dockerignore
 - [x] Nginx 生产配置
 - [x] 运维脚本目录
+- [x] Vercel 部署配置（vercel.json + api/index.py + api/requirements.txt）
+- [x] Vercel Cron 定时采集端点
+- [x] GitHub Actions 爬虫工作流
 
 ------
 
@@ -185,10 +201,9 @@
 
 - [ ] 缺少 tests/ 目录，无单元测试和集成测试（AGENT.md 要求覆盖率 >= 80%）
 - [ ] 队伍详情页（TeamDetailView.vue）路由中无 /teams/:id
-- [ ] 爬虫定时调度未配置（需 cron 或 APScheduler）
-- [ ] SSL 证书实际配置（Let's Encrypt）
-- [ ] 自动备份脚本实际部署（pg_dump 定时任务）
-- [ ] .env 文件未创建（需从 .env.example 复制并填写实际配置）
+- [ ] Neon 数据库实际创建与迁移
+- [ ] Vercel 项目创建与首次部署
+- [ ] GitHub Secrets 配置 DATABASE_URL
 
 ------
 
@@ -197,19 +212,66 @@
 | 风险 | 影响 | 建议 |
 |------|------|------|
 | 无测试覆盖 | 代码质量无保障 | 优先补充核心模块单元测试 |
-| 爬虫未配置定时任务 | 无法自动采集 | 部署时配置 APScheduler 或 cron |
-| 无 SSL | 数据传输不安全 | 部署时配置 Let's Encrypt |
-| 无自动备份 | 数据丢失风险 | 部署时配置 pg_dump 定时备份 |
+| Vercel 冷启动 | API 首次响应慢 | Neon 连接池 + keep-alive |
+| Serverless 超时 | 爬虫可能超 10s 限制 | 拆分为单条采集 + GitHub Actions 兜底 |
 
 ------
 
 # 7. 下一步建议
 
-1. **补充单元测试**（保障代码质量，AGENT.md 要求 >= 80%）
-2. **配置爬虫定时调度**（APScheduler 或 cron）
-3. **服务器部署**（Nginx + SSL + 备份 + 日志）
-4. **执行验收测试**
-5. **上线**
+1. **创建 Neon 数据库**（免费 PostgreSQL）→ 执行 Alembic 迁移
+2. **Vercel 首次部署**（导入 GitHub 仓库 → 配置环境变量）
+3. **GitHub Secrets 配置**（DATABASE_URL 供 Actions 爬虫使用）
+4. **补充单元测试**
+5. **验收测试 + 上线**
+
+------
+
+# 8. Vercel 部署指南
+
+## 前置条件
+
+1. [Neon](https://neon.tech) 免费账号 → 创建 PostgreSQL 数据库
+2. [Vercel](https://vercel.com) 免费账号
+
+## 部署步骤
+
+### Step 1：创建 Neon 数据库
+
+1. 注册 https://neon.tech → Create Project → 选择区域（推荐 Singapore）
+2. 获取连接串：`postgresql://user:pass@ep-xxx.neon.tech/starcraft?sslmode=require`
+3. 执行数据库迁移：
+   ```bash
+   DATABASE_URL="postgresql://..." alembic upgrade head
+   ```
+
+### Step 2：Vercel 部署
+
+1. 登录 https://vercel.com → Import Git Repository → 选择 `yanwx54/starcraft-team-data-platform`
+2. Framework Preset: Other
+3. Root Directory: `/`（默认）
+4. 环境变量配置：
+   - `DATABASE_URL` = Neon 连接串
+   - `CRON_SECRET` = 自定义随机字符串
+5. 点击 Deploy
+
+### Step 3：GitHub Actions 配置
+
+1. GitHub 仓库 → Settings → Secrets → New secret
+2. Name: `DATABASE_URL`，Value: Neon 连接串
+3. Actions 将在每日北京时间 09:00 自动执行爬虫
+
+## 架构对比
+
+| 组件 | 原方案（Docker） | 新方案（Vercel） |
+|------|------------------|------------------|
+| 前端 | Nginx 容器 | Vercel 静态托管 |
+| 后端 | FastAPI 容器 | Vercel Serverless |
+| 数据库 | PostgreSQL 容器 | Neon 免费版 |
+| 爬虫 | APScheduler | Vercel Cron + GitHub Actions |
+| SSL | Let's Encrypt | Vercel 自动 |
+| 备份 | pg_dump 脚本 | Neon 自动 |
+| 费用 | 需服务器 | **免费** |
 
 ------
 

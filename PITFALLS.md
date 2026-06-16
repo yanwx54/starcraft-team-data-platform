@@ -148,14 +148,67 @@ import { getPlayerDetail, getPlayerMatches, getPlayerPrizes, getPlayerMapStats, 
 
 **现象**：本地分支显示跟踪远程分支，但 Git 认为上游已消失。
 
-**原因**：可能是 push 后远程引用缓存未更新，或 push 过程中跟踪配置异常。
+**原因**：push 后本地远程引用缓存未更新。`git fetch` 后远程分支出现在 `refs/remotes/origin/` 但 `branch --set-upstream-to` 仍报错。
 
-**解决**：重新设置上游跟踪：
+**解决**：
 ```bash
-git branch --set-upstream-to=origin/master master
+git fetch origin
+git push -u origin master
+```
+`push -u` 会重新设置跟踪关系。
+
+**建议**：每次 push 后如出现此警告，执行 `git push -u origin master` 即可修复。
+
+------
+
+### #010 Vercel Serverless 不支持持久进程
+
+**场景**：原方案使用 APScheduler 在 FastAPI 容器内定时运行爬虫。
+
+**现象**：Vercel Serverless Functions 是无状态的，每次请求启动新实例，无法运行后台定时任务。
+
+**原因**：Serverless 架构限制 — 没有持久进程，函数执行完毕即销毁。
+
+**解决**：
+- 使用 Vercel Cron Jobs 触发 API 端点
+- 后端新增 `GET /api/v1/admin/crawler/cron` 端点（CRON_SECRET 鉴权）
+- 备用方案：GitHub Actions 定时触发爬虫脚本
+
+**建议**：Serverless 环境下，所有定时任务必须通过外部触发器（Cron / Actions）调用 HTTP 端点。
+
+------
+
+### #011 Vercel Serverless 函数有执行时间限制
+
+**场景**：爬虫一次采集多篇文章，可能耗时较长。
+
+**现象**：Vercel Hobby 计划 Serverless 函数超时限制为 10 秒（Pro 计划 60 秒）。
+
+**原因**：Serverless 函数不适合长时间运行的任务。
+
+**解决**：
+- Vercel Cron 端点仅触发后台任务（`BackgroundTasks`），快速返回响应
+- 如果采集量大，使用 GitHub Actions 作为主要采集方式（无超时限制）
+- 可拆分为单条采集，多次调用
+
+**建议**：爬虫任务优先使用 GitHub Actions，Vercel Cron 作为轻量级补充。
+
+------
+
+### #012 Neon 数据库连接串需要 sslmode=require
+
+**场景**：从 Vercel Serverless 连接 Neon PostgreSQL。
+
+**现象**：连接失败，报 SSL 相关错误。
+
+**原因**：Neon 强制要求 SSL 连接，连接串必须包含 `?sslmode=require`。
+
+**解决**：
+```
+DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/starcraft?sslmode=require
 ```
 
-**建议**：push 后如出现此警告，执行上述命令修复。也可在 push 时使用 `-u` 参数：`git push -u origin master`。
+**建议**：在 Vercel 环境变量和 GitHub Secrets 中都使用带 `sslmode=require` 的连接串。
 
 ------
 
@@ -169,3 +222,5 @@ git branch --set-upstream-to=origin/master master
 | Edit 工具 | 替换前必须 Read 精确内容；缩进/空格必须完全一致 |
 | 代码规范 | 同模块 import 合并；逐步添加时注意代码整洁 |
 | 备份习惯 | 完成功能即提交；会话结束前检查 git status；定期 push 远程 |
+| Serverless | 不支持持久进程；函数有超时限制；定时任务需外部触发 |
+| Neon | 连接串必须包含 `?sslmode=require` |

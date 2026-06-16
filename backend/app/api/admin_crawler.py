@@ -1,8 +1,9 @@
 """后台管理接口 — 手动采集、采集日志。"""
 
 import logging
+import os
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import get_current_admin
@@ -75,3 +76,17 @@ def get_crawl_logs(
         "page": page,
         "page_size": page_size,
     }
+
+
+@router.get("/cron")
+async def cron_crawl(request: Request, background_tasks: BackgroundTasks):
+    """Vercel Cron 定时采集入口。通过 CRON_SECRET 环境变量鉴权。"""
+    cron_secret = os.getenv("CRON_SECRET", "")
+    auth_header = request.headers.get("x-cron-secret", "")
+
+    if cron_secret and auth_header != cron_secret:
+        raise HTTPException(status_code=401, detail="Invalid cron secret")
+
+    background_tasks.add_task(run_daily_crawl)
+    logger.info("Vercel Cron 触发每日采集")
+    return {"message": "Cron 采集任务已启动", "status": "running"}
