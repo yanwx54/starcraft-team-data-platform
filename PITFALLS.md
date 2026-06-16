@@ -4,6 +4,27 @@
 
 ------
 
+## 2026-06-16
+
+### #016 Cloudflare Pages 项目类型误创建为 Worker
+
+**场景**：创建 Cloudflare Pages 项目时误选了 Workers（通过 "Continue with GitHub" 默认创建 Worker。
+
+**现象**：Settings 页面显示 "Worker"、"Workers configuration"，没有 "Builds & deployments" 选项，构建命令为 `npx wrangler deploy`，报错 `Missing entry-point to Worker script`。
+
+**原因**：Cloudflare 新版界面将 Workers 和 Pages 的创建入口混在一起，默认进入的是 Workers 创建流程。
+
+**解决**：
+1. 删除错误创建的 Worker 项目
+2. 在 "Create application" 页面底部找到 **"Looking to deploy Pages? Get started"** 链接
+3. 点击进入 Pages 创建流程
+4. 配置 Build command: `cd frontend && npm install && npm run build`
+5. 配置 Build output directory: `frontend/dist`
+
+**建议**：创建时注意区分 Pages 和 Workers，前端静态网站选 Pages，Serverless 函数选 Workers。
+
+------
+
 ## 2026-06-14
 
 ### #001 PowerShell 不支持 `&&` 语法
@@ -243,6 +264,25 @@ DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/starcraft?sslmode=require
 
 ------
 
+### #015 Cloudflare Pages wrangler.toml 配置冲突
+
+**场景**：wrangler.toml 中配置了 `[site]` 和 `[functions]` 字段后，Cloudflare Pages Git 集成模式构建失败。
+
+**现象**：构建报错 `The entry-point file at 'workers-site/index.js' was not found`，并提示 `[site]` 和 `[functions]` 配置已弃用。
+
+**原因**：Cloudflare Pages 的 Git 集成模式与 wrangler CLI 模式使用的配置字段冲突。`[site]` 和 `[functions]` 是旧版 Cloudflare Workers Sites 的配置，与 Pages 的 Git 部署模式不兼容。
+
+**解决**：修改 wrangler.toml，移除 `[site]` 和 `[functions]` 字段，仅保留基础项目信息：
+```toml
+name = "starcraft-team-data-platform"
+compatibility_date = "2024-01-01"
+```
+Cloudflare Pages 会自动识别 `functions/` 目录中的 Workers Functions，无需额外配置。
+
+**建议**：Cloudflare Pages 项目的 wrangler.toml 保持精简，不要包含 `[site]` 或 `[functions]` 配置块。
+
+------
+
 ## 经验总结
 
 | 类别 | 要点 |
@@ -256,4 +296,4 @@ DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/starcraft?sslmode=require
 | Serverless | 不支持持久进程；函数有超时限制；定时任务需外部触发 |
 | Neon | 连接串必须包含 `?sslmode=require` |
 | 国内部署 | Vercel 国内访问不稳定；Cloudflare Pages + Zeabur（HK）是更优组合 |
-| Cloudflare | Workers 不支持 Python 原生扩展；Python 后端需外部部署 |
+| Cloudflare | Workers 不支持 Python 原生扩展；Python 后端需外部部署；Pages 的 wrangler.toml 不要包含 `[site]` 或 `[functions]` |

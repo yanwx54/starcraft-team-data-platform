@@ -311,5 +311,6 @@
 
 | Commit | 说明 | 日期 |
 |--------|------|------|
+| `e29be9e` | fix: remove conflicting site/functions config from wrangler.toml for Cloudflare Pages | 06-16 |
 | `617a821` | docs: initial project documentation and configuration | 06-14 |
 | `bd78e6e` | feat: add backend, frontend, docker config, and enhanced VS feature | 06-14 |
