@@ -1,9 +1,12 @@
 /**
  * Cloudflare Pages Function — API 代理
- * 将 /api/v1/* 请求转发到 Zeabur 后端，解决跨域问题。
+ * 将 /api/v1/* 请求转发到 Vercel Serverless 后端，解决国内访问问题。
+ *
+ * 环境变量（在 Cloudflare Dashboard 中配置）:
+ *   API_BASE_URL = https://your-project.vercel.app
  */
 
-const API_BASE = env => env.API_BASE_URL || 'https://starcraft-api.zeabur.app';
+const API_BASE = env => env.API_BASE_URL || 'https://starcraft-team-data-platform.vercel.app';
 
 export async function onRequest(context) {
   const { request, env } = context;
