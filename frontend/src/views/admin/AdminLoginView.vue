@@ -33,7 +33,6 @@
         <el-button
           type="primary"
           native-type="submit"
-          @click="handleLogin"
           :loading="loading"
           class="login-button"
           size="large"
@@ -68,6 +67,7 @@ async function handleLogin() {
     ElMessage.warning('请输入用户名和密码')
     return
   }
+  if (loading.value) return  // 防止重复点击
   loading.value = true
   try {
     const data = await adminLogin(form.value.username, form.value.password)
@@ -76,7 +76,8 @@ async function handleLogin() {
     ElMessage.success('登录成功')
     router.push('/admin/crawler')
   } catch (e) {
-    ElMessage.error('登录失败，请检查用户名和密码')
+    const msg = e?.response?.data?.detail || e?.message || '登录失败，请检查用户名和密码'
+    ElMessage.error(msg)
   } finally {
     loading.value = false
   }

@@ -527,6 +527,67 @@ if use_fallback or app is None:
     def _verify_password(plain_password: str, hashed_password: str) -> bool:
         return plain_password == hashed_password
 
+    def _init_admin_user(db: Session) -> None:
+        """确保 admin_users 表存在并有默认管理员。"""
+        try:
+            # 检查表是否存在（PostgreSQL）
+            from sqlalchemy import text
+            result = db.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'admin_users'
+                )
+            """))
+            table_exists = result.scalar()
+
+            if not table_exists:
+                # 创建 admin_users 表
+                db.execute(text("""
+                    CREATE TABLE IF NOT EXISTS admin_users (
+                        id BIGSERIAL PRIMARY KEY,
+                        username VARCHAR(100) NOT NULL UNIQUE,
+                        hashed_password VARCHAR(255) NOT NULL,
+                        is_active BOOLEAN NOT NULL DEFAULT true,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                db.commit()
+
+            # 检查并创建默认管理员
+            from app.models.admin_user import AdminUser
+            admin = db.query(AdminUser).filter(AdminUser.username == "admin").first()
+            if not admin:
+                admin = AdminUser(username="admin", hashed_password="admin123", is_active=True)
+                db.add(admin)
+                db.commit()
+        except Exception:
+            # 如果模型导入失败，尝试用纯 SQL 方式创建
+            try:
+                from sqlalchemy import text
+                # 确保表存在
+                db.execute(text("""
+                    CREATE TABLE IF NOT EXISTS admin_users (
+                        id BIGSERIAL PRIMARY KEY,
+                        username VARCHAR(100) NOT NULL UNIQUE,
+                        hashed_password VARCHAR(255) NOT NULL,
+                        is_active BOOLEAN NOT NULL DEFAULT true,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                db.commit()
+                # 检查默认管理员是否存在
+                result = db.execute(text("SELECT id FROM admin_users WHERE username = 'admin'"))
+                if not result.fetchone():
+                    db.execute(text("""
+                        INSERT INTO admin_users (username, hashed_password, is_active)
+                        VALUES ('admin', 'admin123', true)
+                    """))
+                    db.commit()
+            except Exception as inner_e:
+                pass
+
     @admin_auth_router.post("/login")
     async def admin_login(request: FastAPIRequest, db: Session = Depends(get_db)):
         try:
@@ -535,14 +596,30 @@ if use_fallback or app is None:
             password = body.get("password", "")
             if not username or not password:
                 raise HTTPException(status_code=401, detail="用户名或密码错误")
-            from app.models.admin_user import AdminUser
-            admin = db.query(AdminUser).filter(AdminUser.username == username).first()
-            if not admin or not admin.is_active:
-                raise HTTPException(status_code=401, detail="用户名或密码错误")
-            if not _verify_password(password, admin.hashed_password):
-                raise HTTPException(status_code=401, detail="用户名或密码错误")
-            access_token = _create_access_token(data={"sub": admin.username})
-            return {"access_token": access_token, "token_type": "bearer", "username": admin.username}
+
+            # 尝试初始化 admin 用户
+            _init_admin_user(db)
+
+            # 尝试用模型查询
+            try:
+                from app.models.admin_user import AdminUser
+                admin = db.query(AdminUser).filter(AdminUser.username == username).first()
+                if not admin or not admin.is_active:
+                    raise HTTPException(status_code=401, detail="用户名或密码错误")
+                if not _verify_password(password, admin.hashed_password):
+                    raise HTTPException(status_code=401, detail="用户名或密码错误")
+            except (ImportError, Exception):
+                # 模型不可用，改用纯 SQL
+                from sqlalchemy import text
+                result = db.execute(text("SELECT username, hashed_password, is_active FROM admin_users WHERE username = :username"), {"username": username})
+                row = result.fetchone()
+                if not row or not row.is_active:
+                    raise HTTPException(status_code=401, detail="用户名或密码错误")
+                if not _verify_password(password, row.hashed_password):
+                    raise HTTPException(status_code=401, detail="用户名或密码错误")
+
+            access_token = _create_access_token(data={"sub": username})
+            return {"access_token": access_token, "token_type": "bearer", "username": username}
         except HTTPException:
             raise
         except Exception as e:
