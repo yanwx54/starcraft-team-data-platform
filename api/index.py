@@ -506,6 +506,54 @@ if use_fallback or app is None:
     app.include_router(search_router)
 
     # ============================================================
+    # Admin Auth API
+    # ============================================================
+    import jwt
+    from datetime import datetime, timedelta, timezone
+
+    admin_auth_router = APIRouter(prefix="/api/v1/admin/auth", tags=["admin-auth"])
+
+    SECRET_KEY = os.getenv("JWT_SECRET_KEY", "starcraft-admin-secret-key-change-in-production")
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_HOURS = 24
+
+    def _create_access_token(data: dict):
+        to_encode = data.copy()
+        expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    def _verify_password(plain_password: str, hashed_password: str) -> bool:
+        return plain_password == hashed_password
+
+    class LoginRequest:
+        def __init__(self, username: str, password: str):
+            self.username = username
+            self.password = password
+
+    @admin_auth_router.post("/login")
+    def admin_login(request: dict, db: Session = Depends(get_db)):
+        try:
+            from app.models.admin_user import AdminUser
+            username = request.get("username")
+            password = request.get("password")
+            if not username or not password:
+                raise HTTPException(status_code=401, detail="用户名或密码错误")
+            admin = db.query(AdminUser).filter(AdminUser.username == username).first()
+            if not admin or not admin.is_active:
+                raise HTTPException(status_code=401, detail="用户名或密码错误")
+            if not _verify_password(password, admin.hashed_password):
+                raise HTTPException(status_code=401, detail="用户名或密码错误")
+            access_token = _create_access_token(data={"sub": admin.username})
+            return {"access_token": access_token, "token_type": "bearer", "username": admin.username}
+        except HTTPException:
+            raise
+        except Exception as e:
+            return {"error": str(e)}
+
+    app.include_router(admin_auth_router)
+
+    # ============================================================
     # Health Check
     # ============================================================
     @app.get("/api/v1/health")
