@@ -141,10 +141,10 @@ onMounted(async () => {
       getPrizeRanking(10),
       getWinStreakRanking(10),
     ])
-    if (summaryRes.status === 'fulfilled') summary.value = summaryRes.value.data || {}
-    if (matchesRes.status === 'fulfilled') latestMatches.value = matchesRes.value.data?.items || matchesRes.value.data || []
-    if (prizeRes.status === 'fulfilled') prizeRanking.value = prizeRes.value.data || []
-    if (streakRes.status === 'fulfilled') streakRanking.value = streakRes.value.data || []
+    if (summaryRes.status === 'fulfilled') summary.value = summaryRes.value || {}
+    if (matchesRes.status === 'fulfilled') latestMatches.value = matchesRes.value?.items || matchesRes.value || []
+    if (prizeRes.status === 'fulfilled') prizeRanking.value = prizeRes.value || []
+    if (streakRes.status === 'fulfilled') streakRanking.value = streakRes.value || []
   } finally {
     loading.value = false
   }

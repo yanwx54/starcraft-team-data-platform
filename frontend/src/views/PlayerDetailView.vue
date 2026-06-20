@@ -288,13 +288,13 @@ onMounted(async () => {
       getPlayerMapStats(route.params.id),
     ])
     if (detailRes.status === 'fulfilled') {
-      const data = detailRes.value.data || detailRes.value
+      const data = detailRes.value || {}
       player.value = data.player || data
       statistics.value = data.statistics || null
       currentTeam.value = data.current_team || null
     }
     if (mapRes.status === 'fulfilled') {
-      mapStats.value = mapRes.value.data || mapRes.value || []
+      mapStats.value = mapRes.value || []
     }
     fetchPlayerMatches()
     fetchPlayerPrizes()

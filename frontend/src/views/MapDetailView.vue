@@ -87,12 +87,12 @@ onMounted(async () => {
       getMapRaceStats(route.params.id),
     ])
     if (detailRes.status === 'fulfilled') {
-      const data = detailRes.value.data || detailRes.value
+      const data = detailRes.value || {}
       map.value = data.map || data
       statistics.value = data.statistics || null
     }
     if (raceRes.status === 'fulfilled') {
-      raceStats.value = raceRes.value.data || raceRes.value || null
+      raceStats.value = raceRes.value || null
     }
   } finally {
     loading.value = false
