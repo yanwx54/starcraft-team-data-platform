@@ -750,8 +750,59 @@ if use_fallback or app is None:
     # ============================================================
     admin_backfill_router = APIRouter(prefix="/api/v1/admin/crawler/backfill", tags=["admin-backfill"])
 
-    def _init_backfill_table(db: Session) -> None:
-        """确保 backfill_jobs 表存在且字段完整。"""
+    # 字段映射：前端字段 -> 可能的数据库字段名
+    _BACKFILL_FIELD_MAP = {
+        "job_id": ["id", "job_id"],
+        "status": ["status"],
+        "start_date": ["start_date"],
+        "total_count": ["total_count", "total"],
+        "processed_count": ["processed_count", "success_count"],
+        "failed_count": ["failed_count", "error_count"],
+        "skipped_count": ["skipped_count", "skip_count"],
+    }
+
+    def _get_backfill_columns(db) -> list[str]:
+        """查询 backfill_jobs 表实际存在的列。"""
+        try:
+            from sqlalchemy import text
+            cols_result = db.execute(text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'backfill_jobs'
+                ORDER BY ordinal_position
+            """))
+            return [row[0] for row in cols_result.fetchall()]
+        except Exception:
+            return []
+
+    def _map_row_to_frontend(row, columns: list[str]) -> dict:
+        """将数据库行映射到前端期望的字段名。"""
+        result = {}
+        # 建立列名到值的映射
+        col_to_value = {col: val for col, val in zip(columns, row)}
+        # 按前端期望的字段名匹配
+        for frontend_field, possible_cols in _BACKFILL_FIELD_MAP.items():
+            for col in possible_cols:
+                if col in col_to_value:
+                    val = col_to_value[col]
+                    # 处理 id -> job_id
+                    if frontend_field == "job_id" and col == "id":
+                        result[frontend_field] = val
+                    elif col in col_to_value:
+                        result[frontend_field] = val
+                    break
+        # 附加原始列（用于调试/兼容性）
+        for col, val in col_to_value.items():
+            if col not in result and col not in [c for cols in _BACKFILL_FIELD_MAP.values() for c in cols]:
+                result[col] = val
+        # 处理日期字段
+        for key in result:
+            if "date" in key or "at" in key:
+                if result[key] is not None and hasattr(result[key], "isoformat"):
+                    result[key] = result[key].isoformat()
+        return result
+
+    def _init_backfill_table(db: Session) -> bool:
+        """确保 backfill_jobs 表存在。返回 True 表示表可用。"""
         try:
             from sqlalchemy import text
             # 检查表是否存在
@@ -762,78 +813,96 @@ if use_fallback or app is None:
                 )
             """))
             table_exists = check_result.scalar()
-
             if not table_exists:
-                # 表不存在，创建新表
+                # 表不存在，创建一个最简结构
                 db.execute(text("""
                     CREATE TABLE backfill_jobs (
                         id BIGSERIAL PRIMARY KEY,
                         status VARCHAR(20) DEFAULT 'pending',
-                        start_wr_id BIGINT,
-                        end_wr_id BIGINT,
-                        current_wr_id BIGINT,
+                        start_date VARCHAR(20),
                         total_count INTEGER DEFAULT 0,
-                        success_count INTEGER DEFAULT 0,
-                        error_count INTEGER DEFAULT 0,
+                        processed_count INTEGER DEFAULT 0,
+                        failed_count INTEGER DEFAULT 0,
+                        skipped_count INTEGER DEFAULT 0,
                         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
                     )
                 """))
                 db.commit()
-            else:
-                # 表存在，检查并补齐缺失字段
-                required_columns = ['status', 'start_wr_id', 'end_wr_id', 'current_wr_id', 'total_count', 'success_count', 'error_count']
-                cols_result = db.execute(text("""
-                    SELECT column_name FROM information_schema.columns
-                    WHERE table_name = 'backfill_jobs'
-                """))
-                existing_columns = [row[0] for row in cols_result.fetchall()]
-
-                for col in required_columns:
-                    if col not in existing_columns:
-                        col_type = 'VARCHAR(20)' if col == 'status' else 'BIGINT' if 'wr_id' in col else 'INTEGER'
-                        db.execute(text(f"ALTER TABLE backfill_jobs ADD COLUMN {col} {col_type} DEFAULT 0"))
-                db.commit()
+            return True
         except Exception:
-            pass
+            return False
 
     @admin_backfill_router.post("")
     async def start_backfill(request: FastAPIRequest, db: Session = Depends(get_db)):
         try:
             body = await request.json()
-            start_date = body.get("start_date")
-            _init_backfill_table(db)
+            start_date = body.get("start_date") or body.get("start_wr_id") or ""
+            if not _init_backfill_table(db):
+                raise HTTPException(status_code=500, detail="无法初始化回补表")
+
             from sqlalchemy import text
-            result = db.execute(text("""
-                INSERT INTO backfill_jobs (status, start_wr_id, end_wr_id, current_wr_id, total_count)
-                VALUES ('running', 0, 0, 0, 0)
-                RETURNING id
-            """))
+            # 获取表中实际存在的列
+            columns = _get_backfill_columns(db)
+            # 按存在的列动态构建 INSERT
+            insert_cols = []
+            values_dict = {}
+            # 状态字段
+            if "status" in columns:
+                insert_cols.append("status")
+                values_dict["status"] = "running"
+            # 起始日期/起始ID字段
+            if "start_date" in columns:
+                insert_cols.append("start_date")
+                values_dict["start_date"] = start_date if isinstance(start_date, str) else str(start_date)
+            elif "start_wr_id" in columns:
+                insert_cols.append("start_wr_id")
+                values_dict["start_wr_id"] = 0
+            # 计数字段
+            for count_field in ["total_count", "processed_count", "success_count", "failed_count", "error_count", "skipped_count", "end_wr_id", "current_wr_id"]:
+                if count_field in columns:
+                    insert_cols.append(count_field)
+                    values_dict[count_field] = 0
+            # 日期字段
+            if "created_at" in columns:
+                insert_cols.append("created_at")
+                values_dict["created_at"] = text("NOW()")
+            if "updated_at" in columns:
+                insert_cols.append("updated_at")
+                values_dict["updated_at"] = text("NOW()")
+
+            if not insert_cols:
+                raise HTTPException(status_code=500, detail="回补表结构未知，无法写入")
+
+            # 构建 SQL
+            col_sql = ", ".join(insert_cols)
+            val_placeholders = ", ".join(f":{c}" if not c == "created_at" and not c == "updated_at" else "NOW()" for c in insert_cols)
+            # 去掉 text() 值，改为普通值
+            simple_values = {k: v for k, v in values_dict.items() if not isinstance(v, text.__class__)}
+            # 重新构建
+            col_sql = ", ".join(insert_cols)
+            val_parts = []
+            for c in insert_cols:
+                if c == "created_at" or c == "updated_at":
+                    val_parts.append("NOW()")
+                else:
+                    val_parts.append(f":{c}")
+            val_sql = ", ".join(val_parts)
+
+            sql = f"INSERT INTO backfill_jobs ({col_sql}) VALUES ({val_sql}) RETURNING id"
+            params = {k: v for k, v in values_dict.items() if k not in ["created_at", "updated_at"]}
+            result = db.execute(text(sql), params)
             db.commit()
             job_id = result.fetchone()[0]
             return {"message": "回补任务已启动", "job_id": job_id, "status": "running"}
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @admin_backfill_router.post("/start")
     async def start_backfill_legacy(request: FastAPIRequest, db: Session = Depends(get_db)):
-        """兼容旧路径 /start"""
-        try:
-            body = await request.json()
-            start_wr_id = body.get("start_wr_id")
-            end_wr_id = body.get("end_wr_id")
-            _init_backfill_table(db)
-            from sqlalchemy import text
-            result = db.execute(text("""
-                INSERT INTO backfill_jobs (status, start_wr_id, end_wr_id, current_wr_id, total_count)
-                VALUES ('running', :start, :end, :start, :total)
-                RETURNING id
-            """), {"start": start_wr_id, "end": end_wr_id, "total": 0})
-            db.commit()
-            job_id = result.fetchone()[0]
-            return {"message": "回补任务已启动", "job_id": job_id, "status": "running"}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        return await start_backfill(request, db)
 
     @admin_backfill_router.get("/jobs")
     async def get_backfill_jobs(
@@ -842,31 +911,25 @@ if use_fallback or app is None:
         db: Session = Depends(get_db),
     ):
         try:
-            _init_backfill_table(db)
+            if not _init_backfill_table(db):
+                return {"items": [], "total": 0, "page": page, "page_size": page_size}
             from sqlalchemy import text
             count_result = db.execute(text("SELECT COUNT(*) FROM backfill_jobs"))
             total = count_result.scalar() or 0
-            items_result = db.execute(text("""
-                SELECT id, status, start_wr_id, end_wr_id, current_wr_id, total_count, success_count, error_count, created_at, updated_at
-                FROM backfill_jobs
+            if total == 0:
+                return {"items": [], "total": 0, "page": page, "page_size": page_size}
+            # 获取实际列名，动态构建 SELECT
+            columns = _get_backfill_columns(db)
+            if not columns:
+                return {"items": [], "total": 0, "page": page, "page_size": page_size}
+            col_sql = ", ".join(columns)
+            items_result = db.execute(text(f"""
+                SELECT {col_sql} FROM backfill_jobs
                 ORDER BY id DESC
                 LIMIT :limit OFFSET :offset
             """), {"limit": page_size, "offset": (page - 1) * page_size})
             rows = items_result.fetchall()
-            items = []
-            for row in rows:
-                items.append({
-                    "id": row[0],
-                    "status": row[1],
-                    "start_wr_id": row[2],
-                    "end_wr_id": row[3],
-                    "current_wr_id": row[4],
-                    "total_count": row[5],
-                    "success_count": row[6],
-                    "error_count": row[7],
-                    "created_at": row[8].isoformat() if row[8] else None,
-                    "updated_at": row[9].isoformat() if row[9] else None,
-                })
+            items = [_map_row_to_frontend(row, columns) for row in rows]
             return {"items": items, "total": total, "page": page, "page_size": page_size}
         except Exception as e:
             return {"items": [], "total": 0, "page": page, "page_size": page_size, "error": str(e)}
@@ -877,7 +940,7 @@ if use_fallback or app is None:
             body = await request.json()
             start_date = body.get("start_date")
             _init_backfill_table(db)
-            return {"message": "扫描任务已启动", "status": "running"}
+            return {"message": "扫描任务已启动", "status": "running", "start_date": start_date, "total_found": 0}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -887,7 +950,17 @@ if use_fallback or app is None:
             body = await request.json()
             job_id = body.get("job_id")
             _init_backfill_table(db)
-            return {"message": "任务已恢复", "job_id": job_id, "status": "running"}
+            # 如果存在 status 列，更新为 running
+            from sqlalchemy import text
+            columns = _get_backfill_columns(db)
+            if "status" in columns and job_id:
+                try:
+                    db.execute(text(f"UPDATE backfill_jobs SET status = 'running' WHERE id = :id"), {"id": job_id})
+                    db.commit()
+                except Exception:
+                    pass
+            return {"message": "任务已恢复", "job_id": job_id, "status": "running",
+                    "total_count": 0, "processed_count": 0, "failed_count": 0, "skipped_count": 0}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -895,15 +968,36 @@ if use_fallback or app is None:
     async def pause_backfill(job_id: int, db: Session = Depends(get_db)):
         try:
             _init_backfill_table(db)
-            return {"message": "任务已暂停", "job_id": job_id, "status": "paused"}
+            from sqlalchemy import text
+            columns = _get_backfill_columns(db)
+            if "status" in columns:
+                try:
+                    db.execute(text(f"UPDATE backfill_jobs SET status = 'paused' WHERE id = :id"), {"id": job_id})
+                    db.commit()
+                except Exception:
+                    pass
+            return {"message": "任务已暂停", "job_id": job_id, "status": "paused",
+                    "total_count": 0, "processed_count": 0, "failed_count": 0, "skipped_count": 0}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
     @admin_backfill_router.get("/status/{job_id}")
     async def get_backfill_status(job_id: int, db: Session = Depends(get_db)):
         try:
-            _init_backfill_table(db)
-            return {"job_id": job_id, "status": "running", "progress": 0}
+            if not _init_backfill_table(db):
+                return {"job_id": job_id, "status": "pending", "progress": 0,
+                        "total_count": 0, "processed_count": 0, "failed_count": 0, "skipped_count": 0}
+            from sqlalchemy import text
+            columns = _get_backfill_columns(db)
+            if columns:
+                col_sql = ", ".join(columns)
+                result = db.execute(text(f"SELECT {col_sql} FROM backfill_jobs WHERE id = :id"), {"id": job_id})
+                row = result.fetchone()
+                if row:
+                    mapped = _map_row_to_frontend(row, columns)
+                    return mapped
+            return {"job_id": job_id, "status": "pending", "progress": 0,
+                    "total_count": 0, "processed_count": 0, "failed_count": 0, "skipped_count": 0}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
