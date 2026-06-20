@@ -530,8 +530,8 @@ if use_fallback or app is None:
     def _init_admin_user(db: Session) -> None:
         """确保 admin_users 表存在并有默认管理员。"""
         try:
-            # 检查表是否存在（PostgreSQL）
             from sqlalchemy import text
+            # 检查表是否存在
             result = db.execute(text("""
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables
@@ -541,9 +541,9 @@ if use_fallback or app is None:
             table_exists = result.scalar()
 
             if not table_exists:
-                # 创建 admin_users 表
+                # 表不存在，创建新表
                 db.execute(text("""
-                    CREATE TABLE IF NOT EXISTS admin_users (
+                    CREATE TABLE admin_users (
                         id BIGSERIAL PRIMARY KEY,
                         username VARCHAR(100) NOT NULL UNIQUE,
                         hashed_password VARCHAR(255) NOT NULL,
@@ -552,41 +552,31 @@ if use_fallback or app is None:
                         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
                     )
                 """))
+                db.commit()
+            else:
+                # 表存在，检查并补齐缺失字段
+                required_columns = ['username', 'hashed_password', 'is_active']
+                cols_result = db.execute(text("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'admin_users'
+                """))
+                existing_columns = [row[0] for row in cols_result.fetchall()]
+                for col in required_columns:
+                    if col not in existing_columns:
+                        col_type = 'VARCHAR(255)' if col == 'hashed_password' else 'VARCHAR(100)' if col == 'username' else 'BOOLEAN'
+                        db.execute(text(f"ALTER TABLE admin_users ADD COLUMN {col} {col_type} DEFAULT true"))
                 db.commit()
 
-            # 检查并创建默认管理员
-            from app.models.admin_user import AdminUser
-            admin = db.query(AdminUser).filter(AdminUser.username == "admin").first()
-            if not admin:
-                admin = AdminUser(username="admin", hashed_password="admin123", is_active=True)
-                db.add(admin)
-                db.commit()
-        except Exception:
-            # 如果模型导入失败，尝试用纯 SQL 方式创建
-            try:
-                from sqlalchemy import text
-                # 确保表存在
+            # 检查并创建默认管理员（用纯 SQL，避免依赖模型）
+            result = db.execute(text("SELECT id FROM admin_users WHERE username = 'admin'"))
+            if not result.fetchone():
                 db.execute(text("""
-                    CREATE TABLE IF NOT EXISTS admin_users (
-                        id BIGSERIAL PRIMARY KEY,
-                        username VARCHAR(100) NOT NULL UNIQUE,
-                        hashed_password VARCHAR(255) NOT NULL,
-                        is_active BOOLEAN NOT NULL DEFAULT true,
-                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                    )
+                    INSERT INTO admin_users (username, hashed_password, is_active)
+                    VALUES ('admin', 'admin123', true)
                 """))
                 db.commit()
-                # 检查默认管理员是否存在
-                result = db.execute(text("SELECT id FROM admin_users WHERE username = 'admin'"))
-                if not result.fetchone():
-                    db.execute(text("""
-                        INSERT INTO admin_users (username, hashed_password, is_active)
-                        VALUES ('admin', 'admin123', true)
-                    """))
-                    db.commit()
-            except Exception as inner_e:
-                pass
+        except Exception:
+            pass
 
     @admin_auth_router.post("/login")
     async def admin_login(request: FastAPIRequest, db: Session = Depends(get_db)):
@@ -597,26 +587,17 @@ if use_fallback or app is None:
             if not username or not password:
                 raise HTTPException(status_code=401, detail="用户名或密码错误")
 
-            # 尝试初始化 admin 用户
+            # 初始化 admin 用户（确保表存在、字段完整、默认用户存在）
             _init_admin_user(db)
 
-            # 尝试用模型查询
-            try:
-                from app.models.admin_user import AdminUser
-                admin = db.query(AdminUser).filter(AdminUser.username == username).first()
-                if not admin or not admin.is_active:
-                    raise HTTPException(status_code=401, detail="用户名或密码错误")
-                if not _verify_password(password, admin.hashed_password):
-                    raise HTTPException(status_code=401, detail="用户名或密码错误")
-            except (ImportError, Exception):
-                # 模型不可用，改用纯 SQL
-                from sqlalchemy import text
-                result = db.execute(text("SELECT username, hashed_password, is_active FROM admin_users WHERE username = :username"), {"username": username})
-                row = result.fetchone()
-                if not row or not row.is_active:
-                    raise HTTPException(status_code=401, detail="用户名或密码错误")
-                if not _verify_password(password, row.hashed_password):
-                    raise HTTPException(status_code=401, detail="用户名或密码错误")
+            # 用纯 SQL 方式查询（不依赖模型）
+            from sqlalchemy import text
+            result = db.execute(text("SELECT username, hashed_password, is_active FROM admin_users WHERE username = :username"), {"username": username})
+            row = result.fetchone()
+            if not row or not row.is_active:
+                raise HTTPException(status_code=401, detail="用户名或密码错误")
+            if not _verify_password(password, row.hashed_password):
+                raise HTTPException(status_code=401, detail="用户名或密码错误")
 
             access_token = _create_access_token(data={"sub": username})
             return {"access_token": access_token, "token_type": "bearer", "username": username}
@@ -633,19 +614,40 @@ if use_fallback or app is None:
     admin_crawler_router = APIRouter(prefix="/api/v1/admin/crawler", tags=["admin-crawler"])
 
     def _init_crawl_log_table(db: Session) -> None:
-        """确保 crawl_logs 表存在。"""
+        """确保 crawl_logs 表存在且字段完整。"""
         try:
             from sqlalchemy import text
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS crawl_logs (
-                    id BIGSERIAL PRIMARY KEY,
-                    wr_id BIGINT,
-                    log_level VARCHAR(20) DEFAULT 'info',
-                    message TEXT,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            check_result = db.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'crawl_logs'
                 )
             """))
-            db.commit()
+            table_exists = check_result.scalar()
+
+            if not table_exists:
+                db.execute(text("""
+                    CREATE TABLE crawl_logs (
+                        id BIGSERIAL PRIMARY KEY,
+                        wr_id BIGINT,
+                        log_level VARCHAR(20) DEFAULT 'info',
+                        message TEXT,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                db.commit()
+            else:
+                required_columns = ['wr_id', 'log_level', 'message']
+                cols_result = db.execute(text("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'crawl_logs'
+                """))
+                existing_columns = [row[0] for row in cols_result.fetchall()]
+                for col in required_columns:
+                    if col not in existing_columns:
+                        col_type = 'BIGINT' if col == 'wr_id' else 'TEXT' if col == 'message' else 'VARCHAR(20)'
+                        db.execute(text(f"ALTER TABLE crawl_logs ADD COLUMN {col} {col_type}"))
+                db.commit()
         except Exception:
             pass
 
@@ -749,24 +751,49 @@ if use_fallback or app is None:
     admin_backfill_router = APIRouter(prefix="/api/v1/admin/crawler/backfill", tags=["admin-backfill"])
 
     def _init_backfill_table(db: Session) -> None:
-        """确保 backfill_jobs 表存在。"""
+        """确保 backfill_jobs 表存在且字段完整。"""
         try:
             from sqlalchemy import text
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS backfill_jobs (
-                    id BIGSERIAL PRIMARY KEY,
-                    status VARCHAR(20) DEFAULT 'pending',
-                    start_wr_id BIGINT,
-                    end_wr_id BIGINT,
-                    current_wr_id BIGINT,
-                    total_count INTEGER DEFAULT 0,
-                    success_count INTEGER DEFAULT 0,
-                    error_count INTEGER DEFAULT 0,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            # 检查表是否存在
+            check_result = db.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'backfill_jobs'
                 )
             """))
-            db.commit()
+            table_exists = check_result.scalar()
+
+            if not table_exists:
+                # 表不存在，创建新表
+                db.execute(text("""
+                    CREATE TABLE backfill_jobs (
+                        id BIGSERIAL PRIMARY KEY,
+                        status VARCHAR(20) DEFAULT 'pending',
+                        start_wr_id BIGINT,
+                        end_wr_id BIGINT,
+                        current_wr_id BIGINT,
+                        total_count INTEGER DEFAULT 0,
+                        success_count INTEGER DEFAULT 0,
+                        error_count INTEGER DEFAULT 0,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                db.commit()
+            else:
+                # 表存在，检查并补齐缺失字段
+                required_columns = ['status', 'start_wr_id', 'end_wr_id', 'current_wr_id', 'total_count', 'success_count', 'error_count']
+                cols_result = db.execute(text("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'backfill_jobs'
+                """))
+                existing_columns = [row[0] for row in cols_result.fetchall()]
+
+                for col in required_columns:
+                    if col not in existing_columns:
+                        col_type = 'VARCHAR(20)' if col == 'status' else 'BIGINT' if 'wr_id' in col else 'INTEGER'
+                        db.execute(text(f"ALTER TABLE backfill_jobs ADD COLUMN {col} {col_type} DEFAULT 0"))
+                db.commit()
         except Exception:
             pass
 
@@ -888,22 +915,43 @@ if use_fallback or app is None:
     admin_issues_router = APIRouter(prefix="/api/v1/admin/issues", tags=["admin-issues"])
 
     def _init_issues_table(db: Session) -> None:
-        """确保 data_issues 表存在。"""
+        """确保 data_issues 表存在且字段完整。"""
         try:
             from sqlalchemy import text
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS data_issues (
-                    id BIGSERIAL PRIMARY KEY,
-                    issue_type VARCHAR(50),
-                    description TEXT,
-                    wr_id BIGINT,
-                    status VARCHAR(20) DEFAULT 'open',
-                    resolved_at TIMESTAMP,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            check_result = db.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'data_issues'
                 )
             """))
-            db.commit()
+            table_exists = check_result.scalar()
+
+            if not table_exists:
+                db.execute(text("""
+                    CREATE TABLE data_issues (
+                        id BIGSERIAL PRIMARY KEY,
+                        issue_type VARCHAR(50),
+                        description TEXT,
+                        wr_id BIGINT,
+                        status VARCHAR(20) DEFAULT 'open',
+                        resolved_at TIMESTAMP,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                db.commit()
+            else:
+                required_columns = ['issue_type', 'description', 'wr_id', 'status', 'resolved_at']
+                cols_result = db.execute(text("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'data_issues'
+                """))
+                existing_columns = [row[0] for row in cols_result.fetchall()]
+                for col in required_columns:
+                    if col not in existing_columns:
+                        col_type = 'TEXT' if col == 'description' else 'TIMESTAMP' if col == 'resolved_at' else 'BIGINT' if col == 'wr_id' else 'VARCHAR(50)'
+                        db.execute(text(f"ALTER TABLE data_issues ADD COLUMN {col} {col_type}"))
+                db.commit()
         except Exception:
             pass
 
@@ -961,21 +1009,42 @@ if use_fallback or app is None:
     admin_translations_router = APIRouter(prefix="/api/v1/admin/translations", tags=["admin-translations"])
 
     def _init_translations_table(db: Session) -> None:
-        """确保 translation_rules 表存在。"""
+        """确保 translation_rules 表存在且字段完整。"""
         try:
             from sqlalchemy import text
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS translation_rules (
-                    id BIGSERIAL PRIMARY KEY,
-                    original_text VARCHAR(500),
-                    translated_text VARCHAR(500),
-                    category VARCHAR(100),
-                    is_active BOOLEAN DEFAULT true,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            check_result = db.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables
+                    WHERE table_name = 'translation_rules'
                 )
             """))
-            db.commit()
+            table_exists = check_result.scalar()
+
+            if not table_exists:
+                db.execute(text("""
+                    CREATE TABLE translation_rules (
+                        id BIGSERIAL PRIMARY KEY,
+                        original_text VARCHAR(500),
+                        translated_text VARCHAR(500),
+                        category VARCHAR(100),
+                        is_active BOOLEAN DEFAULT true,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
+                db.commit()
+            else:
+                required_columns = ['original_text', 'translated_text', 'category', 'is_active']
+                cols_result = db.execute(text("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'translation_rules'
+                """))
+                existing_columns = [row[0] for row in cols_result.fetchall()]
+                for col in required_columns:
+                    if col not in existing_columns:
+                        col_type = 'BOOLEAN' if col == 'is_active' else 'VARCHAR(500)' if 'text' in col else 'VARCHAR(100)'
+                        db.execute(text(f"ALTER TABLE translation_rules ADD COLUMN {col} {col_type}"))
+                db.commit()
         except Exception:
             pass
 
