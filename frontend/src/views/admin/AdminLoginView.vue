@@ -32,7 +32,8 @@
         </div>
         <el-button
           type="primary"
-          html-type="submit"
+          native-type="submit"
+          @click="handleLogin"
           :loading="loading"
           class="login-button"
           size="large"
@@ -69,14 +70,13 @@ async function handleLogin() {
   }
   loading.value = true
   try {
-    const res = await adminLogin(form.value.username, form.value.password)
-    const data = res.data || res
+    const data = await adminLogin(form.value.username, form.value.password)
     localStorage.setItem('admin_token', data.access_token)
     localStorage.setItem('admin_username', data.username || form.value.username)
     ElMessage.success('登录成功')
     router.push('/admin/crawler')
   } catch (e) {
-    // error handled by interceptor
+    ElMessage.error('登录失败，请检查用户名和密码')
   } finally {
     loading.value = false
   }

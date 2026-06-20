@@ -510,6 +510,7 @@ if use_fallback or app is None:
     # ============================================================
     import jwt
     from datetime import datetime, timedelta, timezone
+    from fastapi import Request as FastAPIRequest
 
     admin_auth_router = APIRouter(prefix="/api/v1/admin/auth", tags=["admin-auth"])
 
@@ -526,19 +527,15 @@ if use_fallback or app is None:
     def _verify_password(plain_password: str, hashed_password: str) -> bool:
         return plain_password == hashed_password
 
-    class LoginRequest:
-        def __init__(self, username: str, password: str):
-            self.username = username
-            self.password = password
-
     @admin_auth_router.post("/login")
-    def admin_login(request: dict, db: Session = Depends(get_db)):
+    async def admin_login(request: FastAPIRequest, db: Session = Depends(get_db)):
         try:
-            from app.models.admin_user import AdminUser
-            username = request.get("username")
-            password = request.get("password")
+            body = await request.json()
+            username = body.get("username", "")
+            password = body.get("password", "")
             if not username or not password:
                 raise HTTPException(status_code=401, detail="用户名或密码错误")
+            from app.models.admin_user import AdminUser
             admin = db.query(AdminUser).filter(AdminUser.username == username).first()
             if not admin or not admin.is_active:
                 raise HTTPException(status_code=401, detail="用户名或密码错误")
@@ -549,7 +546,7 @@ if use_fallback or app is None:
         except HTTPException:
             raise
         except Exception as e:
-            return {"error": str(e)}
+            raise HTTPException(status_code=500, detail=str(e))
 
     app.include_router(admin_auth_router)
 
