@@ -628,6 +628,362 @@ if use_fallback or app is None:
     app.include_router(admin_auth_router)
 
     # ============================================================
+    # Admin Crawler API
+    # ============================================================
+    admin_crawler_router = APIRouter(prefix="/api/v1/admin/crawler", tags=["admin-crawler"])
+
+    def _init_crawl_log_table(db: Session) -> None:
+        """确保 crawl_logs 表存在。"""
+        try:
+            from sqlalchemy import text
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS crawl_logs (
+                    id BIGSERIAL PRIMARY KEY,
+                    wr_id BIGINT,
+                    log_level VARCHAR(20) DEFAULT 'info',
+                    message TEXT,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            db.commit()
+        except Exception:
+            pass
+
+    @admin_crawler_router.post("/run")
+    async def run_crawl(request: FastAPIRequest, db: Session = Depends(get_db)):
+        try:
+            _init_crawl_log_table(db)
+            from sqlalchemy import text
+            db.execute(text("""
+                INSERT INTO crawl_logs (wr_id, log_level, message)
+                VALUES (NULL, 'info', '手动采集任务已启动')
+            """))
+            db.commit()
+            return {"message": "采集任务已启动", "status": "running"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_crawler_router.post("/single")
+    async def run_single_crawl(request: FastAPIRequest, db: Session = Depends(get_db)):
+        try:
+            body = await request.json()
+            wr_id = body.get("wr_id")
+            if not wr_id:
+                raise HTTPException(status_code=400, detail="wr_id 不能为空")
+            _init_crawl_log_table(db)
+            from sqlalchemy import text
+            db.execute(text("""
+                INSERT INTO crawl_logs (wr_id, log_level, message)
+                VALUES (:wr_id, 'info', '按 wr_id 采集任务已启动')
+            """), {"wr_id": wr_id})
+            db.commit()
+            return {"message": f"采集任务已启动: wr_id={wr_id}", "status": "running", "wr_id": wr_id}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_crawler_router.post("/run/{wr_id}")
+    async def run_crawl_by_wr_id(wr_id: int, db: Session = Depends(get_db)):
+        try:
+            _init_crawl_log_table(db)
+            from sqlalchemy import text
+            db.execute(text("""
+                INSERT INTO crawl_logs (wr_id, log_level, message)
+                VALUES (:wr_id, 'info', '按 wr_id 采集任务已启动')
+            """), {"wr_id": wr_id})
+            db.commit()
+            return {"message": f"采集任务已启动: wr_id={wr_id}", "status": "running", "wr_id": wr_id}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_crawler_router.get("/logs")
+    async def get_crawl_logs(
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
+        log_level: str | None = Query(None),
+        db: Session = Depends(get_db),
+    ):
+        try:
+            _init_crawl_log_table(db)
+            from sqlalchemy import text
+            if log_level:
+                count_result = db.execute(text("SELECT COUNT(*) FROM crawl_logs WHERE log_level = :level"), {"level": log_level})
+                total = count_result.scalar() or 0
+                items_result = db.execute(text("""
+                    SELECT id, wr_id, log_level, message, created_at
+                    FROM crawl_logs
+                    WHERE log_level = :level
+                    ORDER BY id DESC
+                    LIMIT :limit OFFSET :offset
+                """), {"level": log_level, "limit": page_size, "offset": (page - 1) * page_size})
+            else:
+                count_result = db.execute(text("SELECT COUNT(*) FROM crawl_logs"))
+                total = count_result.scalar() or 0
+                items_result = db.execute(text("""
+                    SELECT id, wr_id, log_level, message, created_at
+                    FROM crawl_logs
+                    ORDER BY id DESC
+                    LIMIT :limit OFFSET :offset
+                """), {"limit": page_size, "offset": (page - 1) * page_size})
+
+            rows = items_result.fetchall()
+            items = []
+            for row in rows:
+                items.append({
+                    "id": row[0],
+                    "wr_id": row[1],
+                    "log_level": row[2],
+                    "message": row[3],
+                    "created_at": row[4].isoformat() if row[4] else None,
+                })
+            return {"items": items, "total": total, "page": page, "page_size": page_size}
+        except Exception as e:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size, "error": str(e)}
+
+    app.include_router(admin_crawler_router)
+
+    # ============================================================
+    # Admin Backfill API
+    # ============================================================
+    admin_backfill_router = APIRouter(prefix="/api/v1/admin/crawler/backfill", tags=["admin-backfill"])
+
+    def _init_backfill_table(db: Session) -> None:
+        """确保 backfill_jobs 表存在。"""
+        try:
+            from sqlalchemy import text
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS backfill_jobs (
+                    id BIGSERIAL PRIMARY KEY,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    start_wr_id BIGINT,
+                    end_wr_id BIGINT,
+                    current_wr_id BIGINT,
+                    total_count INTEGER DEFAULT 0,
+                    success_count INTEGER DEFAULT 0,
+                    error_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            db.commit()
+        except Exception:
+            pass
+
+    @admin_backfill_router.post("/start")
+    async def start_backfill(request: FastAPIRequest, db: Session = Depends(get_db)):
+        try:
+            body = await request.json()
+            start_wr_id = body.get("start_wr_id")
+            end_wr_id = body.get("end_wr_id")
+            _init_backfill_table(db)
+            from sqlalchemy import text
+            result = db.execute(text("""
+                INSERT INTO backfill_jobs (status, start_wr_id, end_wr_id, current_wr_id, total_count)
+                VALUES ('running', :start, :end, :start, :total)
+                RETURNING id
+            """), {"start": start_wr_id, "end": end_wr_id, "total": 0})
+            db.commit()
+            job_id = result.fetchone()[0]
+            return {"message": "回补任务已启动", "job_id": job_id, "status": "running"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_backfill_router.get("/jobs")
+    async def get_backfill_jobs(
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
+        db: Session = Depends(get_db),
+    ):
+        try:
+            _init_backfill_table(db)
+            from sqlalchemy import text
+            count_result = db.execute(text("SELECT COUNT(*) FROM backfill_jobs"))
+            total = count_result.scalar() or 0
+            items_result = db.execute(text("""
+                SELECT id, status, start_wr_id, end_wr_id, current_wr_id, total_count, success_count, error_count, created_at, updated_at
+                FROM backfill_jobs
+                ORDER BY id DESC
+                LIMIT :limit OFFSET :offset
+            """), {"limit": page_size, "offset": (page - 1) * page_size})
+            rows = items_result.fetchall()
+            items = []
+            for row in rows:
+                items.append({
+                    "id": row[0],
+                    "status": row[1],
+                    "start_wr_id": row[2],
+                    "end_wr_id": row[3],
+                    "current_wr_id": row[4],
+                    "total_count": row[5],
+                    "success_count": row[6],
+                    "error_count": row[7],
+                    "created_at": row[8].isoformat() if row[8] else None,
+                    "updated_at": row[9].isoformat() if row[9] else None,
+                })
+            return {"items": items, "total": total, "page": page, "page_size": page_size}
+        except Exception as e:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size, "error": str(e)}
+
+    app.include_router(admin_backfill_router)
+
+    # ============================================================
+    # Admin Issues API
+    # ============================================================
+    admin_issues_router = APIRouter(prefix="/api/v1/admin/issues", tags=["admin-issues"])
+
+    def _init_issues_table(db: Session) -> None:
+        """确保 data_issues 表存在。"""
+        try:
+            from sqlalchemy import text
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS data_issues (
+                    id BIGSERIAL PRIMARY KEY,
+                    issue_type VARCHAR(50),
+                    description TEXT,
+                    wr_id BIGINT,
+                    status VARCHAR(20) DEFAULT 'open',
+                    resolved_at TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            db.commit()
+        except Exception:
+            pass
+
+    @admin_issues_router.get("")
+    async def get_issues(
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
+        status: str | None = Query(None),
+        db: Session = Depends(get_db),
+    ):
+        try:
+            _init_issues_table(db)
+            from sqlalchemy import text
+            if status:
+                count_result = db.execute(text("SELECT COUNT(*) FROM data_issues WHERE status = :status"), {"status": status})
+                total = count_result.scalar() or 0
+                items_result = db.execute(text("""
+                    SELECT id, issue_type, description, wr_id, status, resolved_at, created_at, updated_at
+                    FROM data_issues
+                    WHERE status = :status
+                    ORDER BY id DESC
+                    LIMIT :limit OFFSET :offset
+                """), {"status": status, "limit": page_size, "offset": (page - 1) * page_size})
+            else:
+                count_result = db.execute(text("SELECT COUNT(*) FROM data_issues"))
+                total = count_result.scalar() or 0
+                items_result = db.execute(text("""
+                    SELECT id, issue_type, description, wr_id, status, resolved_at, created_at, updated_at
+                    FROM data_issues
+                    ORDER BY id DESC
+                    LIMIT :limit OFFSET :offset
+                """), {"limit": page_size, "offset": (page - 1) * page_size})
+            rows = items_result.fetchall()
+            items = []
+            for row in rows:
+                items.append({
+                    "id": row[0],
+                    "issue_type": row[1],
+                    "description": row[2],
+                    "wr_id": row[3],
+                    "status": row[4],
+                    "resolved_at": row[5].isoformat() if row[5] else None,
+                    "created_at": row[6].isoformat() if row[6] else None,
+                    "updated_at": row[7].isoformat() if row[7] else None,
+                })
+            return {"items": items, "total": total, "page": page, "page_size": page_size}
+        except Exception as e:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size, "error": str(e)}
+
+    app.include_router(admin_issues_router)
+
+    # ============================================================
+    # Admin Translations API
+    # ============================================================
+    admin_translations_router = APIRouter(prefix="/api/v1/admin/translations", tags=["admin-translations"])
+
+    def _init_translations_table(db: Session) -> None:
+        """确保 translation_rules 表存在。"""
+        try:
+            from sqlalchemy import text
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS translation_rules (
+                    id BIGSERIAL PRIMARY KEY,
+                    original_text VARCHAR(500),
+                    translated_text VARCHAR(500),
+                    category VARCHAR(100),
+                    is_active BOOLEAN DEFAULT true,
+                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            db.commit()
+        except Exception:
+            pass
+
+    @admin_translations_router.get("")
+    async def get_translations(
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
+        db: Session = Depends(get_db),
+    ):
+        try:
+            _init_translations_table(db)
+            from sqlalchemy import text
+            count_result = db.execute(text("SELECT COUNT(*) FROM translation_rules"))
+            total = count_result.scalar() or 0
+            items_result = db.execute(text("""
+                SELECT id, original_text, translated_text, category, is_active, created_at, updated_at
+                FROM translation_rules
+                ORDER BY id DESC
+                LIMIT :limit OFFSET :offset
+            """), {"limit": page_size, "offset": (page - 1) * page_size})
+            rows = items_result.fetchall()
+            items = []
+            for row in rows:
+                items.append({
+                    "id": row[0],
+                    "original_text": row[1],
+                    "translated_text": row[2],
+                    "category": row[3],
+                    "is_active": row[4],
+                    "created_at": row[5].isoformat() if row[5] else None,
+                    "updated_at": row[6].isoformat() if row[6] else None,
+                })
+            return {"items": items, "total": total, "page": page, "page_size": page_size}
+        except Exception as e:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size, "error": str(e)}
+
+    @admin_translations_router.post("")
+    async def add_translation(request: FastAPIRequest, db: Session = Depends(get_db)):
+        try:
+            body = await request.json()
+            original_text = body.get("original_text", "")
+            translated_text = body.get("translated_text", "")
+            category = body.get("category", "")
+            if not original_text or not translated_text:
+                raise HTTPException(status_code=400, detail="原文和译文不能为空")
+            _init_translations_table(db)
+            from sqlalchemy import text
+            result = db.execute(text("""
+                INSERT INTO translation_rules (original_text, translated_text, category)
+                VALUES (:original, :translated, :category)
+                RETURNING id
+            """), {"original": original_text, "translated": translated_text, "category": category})
+            db.commit()
+            new_id = result.fetchone()[0]
+            return {"message": "添加成功", "id": new_id}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    app.include_router(admin_translations_router)
+
+    # ============================================================
     # Health Check
     # ============================================================
     @app.get("/api/v1/health")
