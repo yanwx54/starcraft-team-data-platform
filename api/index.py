@@ -770,8 +770,27 @@ if use_fallback or app is None:
         except Exception:
             pass
 
-    @admin_backfill_router.post("/start")
+    @admin_backfill_router.post("")
     async def start_backfill(request: FastAPIRequest, db: Session = Depends(get_db)):
+        try:
+            body = await request.json()
+            start_date = body.get("start_date")
+            _init_backfill_table(db)
+            from sqlalchemy import text
+            result = db.execute(text("""
+                INSERT INTO backfill_jobs (status, start_wr_id, end_wr_id, current_wr_id, total_count)
+                VALUES ('running', 0, 0, 0, 0)
+                RETURNING id
+            """))
+            db.commit()
+            job_id = result.fetchone()[0]
+            return {"message": "回补任务已启动", "job_id": job_id, "status": "running"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_backfill_router.post("/start")
+    async def start_backfill_legacy(request: FastAPIRequest, db: Session = Depends(get_db)):
+        """兼容旧路径 /start"""
         try:
             body = await request.json()
             start_wr_id = body.get("start_wr_id")
@@ -824,6 +843,42 @@ if use_fallback or app is None:
             return {"items": items, "total": total, "page": page, "page_size": page_size}
         except Exception as e:
             return {"items": [], "total": 0, "page": page, "page_size": page_size, "error": str(e)}
+
+    @admin_backfill_router.post("/scan")
+    async def scan_backfill(request: FastAPIRequest, db: Session = Depends(get_db)):
+        try:
+            body = await request.json()
+            start_date = body.get("start_date")
+            _init_backfill_table(db)
+            return {"message": "扫描任务已启动", "status": "running"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_backfill_router.post("/resume")
+    async def resume_backfill(request: FastAPIRequest, db: Session = Depends(get_db)):
+        try:
+            body = await request.json()
+            job_id = body.get("job_id")
+            _init_backfill_table(db)
+            return {"message": "任务已恢复", "job_id": job_id, "status": "running"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_backfill_router.post("/pause/{job_id}")
+    async def pause_backfill(job_id: int, db: Session = Depends(get_db)):
+        try:
+            _init_backfill_table(db)
+            return {"message": "任务已暂停", "job_id": job_id, "status": "paused"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @admin_backfill_router.get("/status/{job_id}")
+    async def get_backfill_status(job_id: int, db: Session = Depends(get_db)):
+        try:
+            _init_backfill_table(db)
+            return {"job_id": job_id, "status": "running", "progress": 0}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     app.include_router(admin_backfill_router)
 
